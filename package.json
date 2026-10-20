@@ -1,0 +1,32 @@
+{
+  "name": "counterfoil-offline-ticket",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5175 --strictPort",
+    "typecheck": "tsc -b",
+    "build": "npm run typecheck && vite build",
+    "test": "vitest run",
+    "preview": "vite preview --host 127.0.0.1 --port 4175 --strictPort"
+  },
+  "dependencies": {
+    "@bsv/sdk": "2.8.11",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "4.1.11"
+  },
+  "engines": {
+    "node": ">=22.20.0"
+  },
+  "packageManager": "npm@11.6.1"
+}

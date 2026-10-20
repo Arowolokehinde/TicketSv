@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "name": "offline-ticket",
+  "network": "test",
+  "stack": {
+    "frontend": {
+      "framework": "react",
+      "variant": "react-ts"
+    }
+  },
+  "targets": {
+    "client": ""
+  },
+  "bsvDir": "src/bsv",
+  "capabilities": [
+    "wallet-connect"
+  ],
+  "starter": {
+    "id": "react",
+    "kind": "generated"
+  }
+}
