@@ -1,0 +1,86 @@
+/* Adapt the approved design to the browser viewport, without a design canvas. */
+body { display: block; height: auto; overflow: auto; background: var(--bg); color: var(--ink); }
+#root { container-type: inline-size; min-height: 100vh; }
+html { scroll-behavior: smooth; }
+button:disabled { cursor: not-allowed; }
+a { text-underline-offset: 4px; }
+.landing { max-width: 1600px; margin-inline: auto; }
+.landing-nav .landing-text { text-decoration: none; }
+.landing-hero { min-height: 650px; }
+.hero-copy h1 { font-size: clamp(64px, 6.5vw, 100px); }
+.landing-nav .btn, .landing .btn { font-size: 11px; }
+.landing p { font-size: 14px; }
+.site-header { display: flex; align-items: center; gap: 30px; padding: 25px 4%; border-bottom: 1px solid var(--line); }
+.site-header .landing-wordmark { font-size: 32px; }
+.site-context { font: 10px/1.7 monospace; letter-spacing: 1px; text-transform: uppercase; color: var(--ink3); }
+.workspace-exit { margin-left: auto; font: 11px monospace; }
+.workspace .shell { grid-template-columns: 210px minmax(0, 1fr); min-height: calc(100vh - 90px); }
+.workspace .rail { padding: 35px 18px; }
+.workspace .rail a { font-size: 11px; padding: 15px 10px; }
+.workspace .rail a[aria-current="page"] { background: var(--acid); color: var(--ink); }
+.workspace .content { max-width: 1250px; width: 100%; padding: 40px clamp(22px, 4vw, 64px) 50px; margin-inline: auto; }
+.section-heading { font: normal 30px/1.2 Georgia, serif; margin: 0 0 20px; letter-spacing: -.7px; }
+.sample-control { display: flex; justify-content: space-between; align-items: center; gap: 15px; margin: 24px 0; padding: 15px 0; border-block: 1px dashed var(--line); }
+.sample-control p { font: 11px/1.7 monospace; margin: 0; color: var(--wine); }
+.sample-control button { border: 0; border-bottom: 1px solid currentColor; padding: 8px 0; font: 11px monospace; background: none; color: var(--wine); cursor: pointer; }
+.receipt-title { margin-top: 14px; }
+.device-status { margin-top: 48px; border-block: 1px solid var(--line); padding: 18px 0; font: 11px/1.7 monospace; }
+.device-status summary { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.device-status summary > span:last-child { margin-left: auto; color: var(--wine); }
+.device-status > p { font: 11px/1.8 monospace; max-width: 680px; }
+.connection-dot { background: var(--ink3); width: 7px; height: 7px; border-radius: 50%; }
+.connection-dot.online { background: var(--green); }
+.device-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin: 25px 0; }
+.device-facts dt { color: var(--ink3); }
+.device-facts dd { margin: 5px 0; overflow-wrap: anywhere; }
+.evidence-list { padding-left: 24px; margin-top: 25px; }
+.evidence-list li { padding: 15px 5px; border-top: 1px dashed var(--line); }
+.evidence-list h3 { margin-bottom: 10px; }
+.preparation-list { list-style: none; padding: 0; margin-block: 25px; }
+.preparation-list li { padding: 20px 0; border-top: 1px solid var(--line); }
+.preparation-list li > div { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.preparation-list h3 { margin: 0; line-height: 1.6; }
+.preparation-list p { margin: 12px 0 0; }
+.scanner-placeholder { display: grid; place-items: center; min-height: 210px; background: #e5e3d6; color: var(--ink3); border: 1px dashed #aaa68f; padding: 30px; margin: 25px 0; }
+.scanner-placeholder > span { font: 72px/1 Georgia, serif; color: var(--wine); }
+.scanner-placeholder p { font: 10px monospace; margin-top: 15px; }
+.empty-activity { padding: 35px 0; border-block: 1px solid var(--line); margin: 30px 0; }
+.empty-activity > span { color: var(--wine); font: 40px Georgia, serif; }
+.empty-activity h3 { font: 25px Georgia, serif; }
+.request-start { padding: clamp(24px, 3vw, 42px); min-width: 0; }
+.request-notice b { font-size: 21px; }
+.request-notice p { margin-top: 10px; }
+.kv { grid-template-columns: minmax(0, 140px) minmax(0, 1fr); }
+.landing .landing-footer { margin-top: 10px; }
+.landing :target { scroll-margin-top: 20px; }
+.release-note { margin-top: 22px; border-left: 2px solid var(--wine); padding-left: 12px; max-width: 360px; }
+.release-note b { font: 9px/1.7 monospace; color: var(--wine); }
+.landing .release-note p { font-size: 12px; line-height: 1.7; margin: 5px 0 0; color: var(--ink2); }
+.skip-link { position: fixed; top: 12px; left: 12px; z-index: 20; transform: translateY(-200%); background: var(--acid); padding: 14px 20px; font: 12px monospace; }
+.skip-link:focus { transform: translateY(0); }
+@media (max-width: 800px) {
+  .workspace .shell { grid-template-columns: 1fr; }
+  .workspace .rail { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 20px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .workspace .rail .brand, .workspace .rail-note { display: none; }
+  .workspace .rail a { border: 0; font-size: 10px; padding: 12px 10px; }
+  .workspace .content { padding: 28px 22px; }
+  .site-context { display: none; }
+  .home-grid, .cols { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .site-header { padding: 20px 22px; gap: 15px; }
+  .site-header .landing-wordmark { font-size: 29px; }
+  .workspace-exit { font-size: 10px; white-space: nowrap; }
+  .landing-hero { min-height: auto; }
+  .hero-copy h1 { font-size: 61px; }
+  .sample-control { align-items: flex-start; flex-direction: column; }
+  .home-prepare { flex-wrap: wrap; }
+  .home-prepare > div { flex: 1; min-width: 180px; }
+  .home-prepare > a { margin-left: 0; width: 100%; }
+  .home-empty { grid-template-columns: 1fr; }
+  .device-facts { grid-template-columns: 1fr; }
+  .preparation-list li > div { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .head h1 { overflow-wrap: anywhere; }
+  .landing-nav .btn { font-size: 9px; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }

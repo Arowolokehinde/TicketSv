@@ -5,7 +5,7 @@ export function FeasibilityScreen(): React.JSX.Element {
   return (
     <main className="development-page">
       <header className="development-header">
-        <a className="wordmark" href="/design/counterfoil-ui.html#/">Counterfoil.</a>
+        <a className="wordmark" href="/">Counterfoil.</a>
         <span>DEVELOPMENT ONLY / NO LIVE OPERATIONS</span>
       </header>
       <section aria-labelledby="development-heading">
@@ -16,7 +16,7 @@ export function FeasibilityScreen(): React.JSX.Element {
           <span data-network={BSV_NETWORK}>Testnet</span>
           <span>Wallet: not connected</span>
         </div>
-        <p className="boundary">This scaffold does not contact a wallet or blockchain service. The design preview uses illustrative data; it does not establish that these integrations work.</p>
+        <p className="boundary">The website does not contact a wallet or blockchain service yet. Sample tickets illustrate the interface; they do not establish that these integrations work.</p>
         <ol className="gate-list">
           {feasibilityGates.map((gate, index) => (
             <li key={gate.id}>
@@ -27,7 +27,7 @@ export function FeasibilityScreen(): React.JSX.Element {
           ))}
         </ol>
         <p className="boundary">The next stage records actual wallet versions, supported devices and reproducible results. No offline readiness or successful verification is claimed here.</p>
-        <a className="preview-link" href="/design/counterfoil-ui.html#/">Open the Counterfoil design preview ↗</a>
+        <a className="preview-link" href="/">Open the Counterfoil website ↗</a>
       </section>
     </main>
   )

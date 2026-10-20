@@ -1,6 +1,6 @@
 # Counterfoil — Offline Ticket Handoff
 
-A BSV ticket-handoff proof of concept, currently at the frontend-scaffolding stage. The reviewed Counterfoil interface uses **demo data**. No real ticket is minted, verified, saved, transferred or broadcast by this scaffold.
+A BSV ticket-handoff proof of concept with a native React website. The landing page, ticket-holder workspace, venue workspace and scanner workspace use the approved Counterfoil design. Wallet, SPV, transport and persistence integrations are not implemented yet: no real ticket is minted, verified, saved, transferred or broadcast. Sample tickets are explicitly labelled.
 
 ## Run locally
 
@@ -11,8 +11,13 @@ npm ci
 npm run dev
 ```
 
-- Design preview: <http://127.0.0.1:5175/> redirects to the unchanged 35-screen HTML prototype.
+- Website: <http://127.0.0.1:5175/> renders the React landing page directly.
+- Ticket holder: <http://127.0.0.1:5175/tickets>, including receive, transfer and sample evidence pages.
+- Venue: <http://127.0.0.1:5175/venue>.
+- Scanner: <http://127.0.0.1:5175/scanner>.
 - Developer harness: <http://127.0.0.1:5175/dev/feasibility> lists seven integration gates as **Not tested**.
+
+Each workspace has `/prepare`, `/headers` and `/activity` pages. Their initial states are real: no wallet connection, stored header snapshot or blockchain operation. Dependent actions are disabled until implemented. The sample collection can be hidden to see the empty state; that display choice is not persisted.
 
 The development server binds only to this machine. Physical-device tests will need a deliberately configured HTTPS origin; localhost does not make this accessible from another device. Existing prototype server port 5173 is left available.
 
@@ -35,13 +40,15 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-Vitest runs unit tests only. Playwright runs `*.browser.test.ts` against a fresh production build at desktop and phone viewport sizes. The browser checks verify unchanged prototype assets, entry routes and an inert developer harness with no wallet/API connections. They do not establish offline or blockchain compatibility.
+Vitest runs unit tests only. Playwright runs `*.browser.test.ts` against a fresh production build at desktop and phone viewport sizes. Checks cover native page navigation/reloads, workspace separation, sample labelling, disabled unsupported operations, responsive layouts, reduced motion, startup requests and the inert developer harness. They do not establish offline or blockchain compatibility.
 
 ## Preserve the design
 
-The sources of truth are `docs/superpowers/design/counterfoil-ui.html`, `counterfoil.css` and `counterfoil-demo.js`. `predev` and `prebuild` copy exactly these files to the ignored `public/design/` directory. Do not edit those generated copies. Existing colours, typography, interactions and demo labels are preserved byte for byte; React product-screen migration comes later.
+The design references are `docs/superpowers/design/counterfoil-ui.html`, `counterfoil.css` and `counterfoil-demo.js`. These remain unchanged. `predev` and `prebuild` copy them to the ignored `public/design/` directory for explicit reference at `/design/counterfoil-ui.html#/`. The website does not redirect there or load its scripts.
 
-The React application currently contains the redirect, development-only not-found recovery, and developer harness. Product routes `/tickets`, `/venue` and `/scanner` are still available **inside the prototype as hash routes**, not as implemented React product pages. Example: `/design/counterfoil-ui.html#/scanner`.
+Native pages live in `src/ui/`; `src/App.tsx` owns pathname routing. Approved design primitives are ported into `src/styles/base.css` and `approved.css`, with viewport adjustments in `website.css`. The landing's motion control and educational handoff journey use React state. There is no iframe, injected prototype HTML, device frame or design-screen selector.
+
+Navigation uses ordinary links, so browser back, direct URLs and refresh work with Vite. A deployment host must serve `index.html` for product paths such as `/tickets/receive`; preserve static-asset paths. No deployment has been configured. Offline reopening still requires the planned service worker and persistence work.
 
 ## Integration boundary
 
@@ -63,4 +70,4 @@ Follow Task 1 of the [parent implementation plan](docs/superpowers/plans/2026-10
 
 The harness cannot mark these gates passed. Record reproducible real evidence before building dependent product integrations or claiming the five live scenes work. Keep private keys, provider secrets and raw wallet storage out of this repository.
 
-See [scaffolding provenance and audit](docs/scaffolding.md), [the scaffold plan](docs/superpowers/plans/2026-10-20-counterfoil-scaffolding.md), and [the design specification](docs/superpowers/specs/2026-10-16-offline-ticket-design.md).
+See [scaffolding provenance and audit](docs/scaffolding.md), [the website correction plan](docs/superpowers/plans/2026-10-20-counterfoil-website.md), and [the design specification](docs/superpowers/specs/2026-10-16-offline-ticket-design.md).

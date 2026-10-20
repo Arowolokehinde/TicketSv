@@ -32,9 +32,10 @@ test('harness is honest, reloadable and inert without a wallet installed', async
   expect(errors).toEqual([])
 })
 
-test('unknown paths offer a recovery link instead of masquerading as product routes', async ({ page }) => {
-  await page.goto('/tickets')
-  await expect(page.getByRole('heading', { name: 'Development route not found' })).toBeVisible()
-  await page.getByRole('link', { name: 'Open the Counterfoil preview' }).click()
-  await expect(page.locator('#lp .landing h1')).toContainText('The ticket')
+test('unknown paths recover to the actual website', async ({ page }) => {
+  await page.goto('/not-a-page')
+  await expect(page.getByRole('heading', { name: 'Page not found.' })).toBeVisible()
+  await page.getByRole('link', { name: 'Back to home' }).click()
+  await expect(page.locator('#root .landing h1')).toContainText('The ticket')
+  await expect(page).toHaveURL(/\/$/)
 })

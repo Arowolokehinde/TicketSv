@@ -1,14 +1,14 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 
-test('root opens the preserved Counterfoil landing and visual tokens', async ({ page }) => {
+test('archived design remains available explicitly with original visual tokens', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
   page.on('requestfailed', request => errors.push(`Failed: ${request.url()}`))
   page.on('response', response => {
     if (response.status() >= 400) errors.push(`${response.status()}: ${response.url()}`)
   })
-  await page.goto('/')
+  await page.goto('/design/counterfoil-ui.html#/')
   await expect(page).toHaveURL(/\/design\/counterfoil-ui\.html#\/$/)
   await expect(page.locator('#lp .landing h1')).toContainText('The ticket')
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--wine').trim())).toBe('#722f2e')
@@ -33,7 +33,7 @@ test('workspace entry hashes survive reload and remain labelled as prototypes', 
     await expect(page.locator('#lp .proto-label')).toContainText('prototype')
     await expect(page.locator('#lp h1')).toBeVisible()
   }
-  await page.goto('/#b1')
+  await page.goto('/design/counterfoil-ui.html#b1')
   await expect(page).toHaveURL(/\/design\/counterfoil-ui\.html#b1$/)
   await expect(page.locator('#lp h1')).toHaveText('Receive a ticket.')
 })

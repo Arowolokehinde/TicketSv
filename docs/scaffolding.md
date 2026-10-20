@@ -2,6 +2,8 @@
 
 This foundation is React-only. The existing prototype remains the design reference, and all wallet/device feasibility gates are untested.
 
+**Website correction, 2026-10-20:** The user clarified that the result must be the website, not a prototype screen. The original scaffold behavior recorded below is historical: `/` now renders a native React landing page, with native `/tickets`, `/venue` and `/scanner` workspaces and supporting routes. The original design archive remains explicitly accessible at `/design/counterfoil-ui.html#/`. It is not the application entry. See the [website plan](superpowers/plans/2026-10-20-counterfoil-website.md) and README for current routes and integration limits.
+
 ## Provenance
 
 Generated on 2026-10-20 with `create-bsv-app@1.1.2`, React starter, `--network test --package-manager npm --skip-install --no-glue --yes`. Generation ran in `/tmp/counterfoil-starter.YbF7nA` and copied only audited files into the project. The CLI delegated its base template to create-vite; resolved package versions and the lockfile pin the promoted result. Future CLI generation alone is not a bit-for-bit reproduction; use this repository and `npm ci`.
@@ -78,3 +80,7 @@ Final clean-install run: `npm ci`, 3 Vitest tests, TypeScript build checking, Vi
 The three copied production preview files remain byte-identical to their source files. All nine pre-existing repository document/prototype files retain their baseline hashes. Production output consists of static HTML, JavaScript and CSS; the installed BSV SDK is unused at runtime until the feasibility work begins. No application server, secret or database is required for this stage.
 
 Independent review found no critical or important issues. Two minor corrections aligned the harness's default typography with the plan and removed stale verification wording. After those corrections, all 3 unit tests, TypeScript checking, the production build and all 10 browser checks passed again. Real wallet, SPV, ARC, persistence and device compatibility testing remain the next phase.
+
+## Native website verification
+
+After the website correction, 3 unit tests and 24 built-browser checks passed on desktop and phone viewports; TypeScript checking and production build also passed. Native URLs, reload/back navigation, workspace separation, sample boundaries, reduced motion, keyboard skip navigation and trailing-slash current-page indication are covered. Independent review corrected landing copy that overstated implemented offline persistence. Original design assets remain unchanged. The website uses normal React pages; the seven real integration gates remain untested.
