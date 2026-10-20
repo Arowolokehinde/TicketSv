@@ -43,7 +43,7 @@ No generated wallet/auth helper code was promoted, and no server-side runtime is
 
 ## Toolchain and verification
 
-Node 22.20.0; npm 11.6.1. Dependency versions and verification results will be recorded once checks finish. Initial pins are provisional until real wallet compatibility testing.
+Node 22.20.0; npm 11.6.1. Resolved versions and completed checks are recorded below. Initial pins are provisional until real wallet compatibility testing.
 
 Resolved provisional versions:
 
@@ -76,3 +76,5 @@ Task 2: six built-browser tests passed across desktop 1440×1050 and phone 390×
 Final clean-install run: `npm ci`, 3 Vitest tests, TypeScript build checking, Vite production build and 10 Playwright checks passed. Browser tests used desktop and phone viewports and reloaded the harness without an installed wallet. No requests outside the app origin (including other localhost ports), WebSockets, service worker registrations, app-created wallet globals or browser errors were observed in those startup tests. This is a bounded startup observation, not a native-wallet network monitor or offline compatibility claim.
 
 The three copied production preview files remain byte-identical to their source files. All nine pre-existing repository document/prototype files retain their baseline hashes. Production output consists of static HTML, JavaScript and CSS; the installed BSV SDK is unused at runtime until the feasibility work begins. No application server, secret or database is required for this stage.
+
+Independent review found no critical or important issues. Two minor corrections aligned the harness's default typography with the plan and removed stale verification wording. After those corrections, all 3 unit tests, TypeScript checking, the production build and all 10 browser checks passed again. Real wallet, SPV, ARC, persistence and device compatibility testing remain the next phase.

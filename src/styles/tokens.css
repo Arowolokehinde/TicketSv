@@ -4,7 +4,7 @@
   --ink: #292a22;
   --wine: #722f2e;
   --acid: #dce68b;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Georgia, "Times New Roman", serif;
   color: var(--ink);
   background: var(--paper);
   font-synthesis: none;
