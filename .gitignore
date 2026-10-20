@@ -1,0 +1,12 @@
+node_modules/
+dist/
+public/design/
+.worktrees/
+.superpowers/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store

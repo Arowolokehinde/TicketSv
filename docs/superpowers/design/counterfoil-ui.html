@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Counterfoil — Offline Ticket Design</title>
+<style>
+:root{
+  --ink:#16191f; --ink2:#4a5160; --ink3:#7b8291; --line:#e2e5ea; --bg:#f6f7f9; --card:#fff;
+  --blue:#2456d6; --blue-bg:#e9effd;      /* offline verification */
+  --violet:#6b3fd1; --violet-bg:#f1ebfd;  /* broadcast */
+  --green:#18794e; --green-bg:#e5f4ec;    /* mined / door pass */
+  --teal:#0f6d78; --teal-bg:#e2f2f3;      /* wallet import */
+  --amber:#9a5300; --amber-bg:#fff3dd;
+  --red:#c4322b; --red-bg:#fdeceb;
+  --gray:#5b6270; --gray-bg:#eef0f3;
+  --radius:10px;
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color:var(--ink);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#dfe2e8;display:grid;grid-template-columns:270px 1fr;height:100vh;overflow:hidden}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+
+/* ---------- design canvas chrome ---------- */
+#index{background:#14171c;color:#cfd3da;overflow:auto;padding:18px 14px 40px}
+#index h1{font-size:15px;color:#fff;margin:0 0 4px}
+#index p{font-size:12px;color:#8e95a3;margin:0 0 14px;line-height:1.45}
+#index h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#7d8594;margin:18px 0 6px}
+#index a{display:block;color:#cfd3da;text-decoration:none;font-size:13px;padding:5px 8px;border-radius:6px}
+#index a:hover{background:#232830}
+#index a.on{background:#2f5bd8;color:#fff}
+#index a small{color:#7d8594;margin-right:6px}
+#index a.on small{color:#cdd9ff}
+#stage{overflow:auto;padding:22px 28px 60px}
+#stagebar{display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+#stagebar h2{margin:0;font-size:18px}
+#stagebar .note{font-size:12.5px;color:#4a5160;flex:1 1 300px}
+.seg{display:inline-flex;background:#fff;border-radius:8px;padding:3px;border:1px solid #c9ced8}
+.seg button{border:0;background:none;padding:5px 12px;border-radius:6px;font:inherit;font-size:13px;cursor:pointer;color:#4a5160}
+.seg button.on{background:#16191f;color:#fff}
+#frames{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+.device{display:flex;flex-direction:column;gap:6px}
+.device .lbl{font-size:12px;color:#4a5160}
+.laptop{width:1040px;height:700px;border:10px solid #1d2026;border-radius:14px;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.phone{width:390px;height:800px;border:12px solid #1d2026;border-radius:42px;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.phone .screen{border-radius:30px}
+.screen{width:100%;height:100%;overflow:auto;container-type:inline-size;background:var(--bg);position:relative}
+#frames.only-laptop .device.ph,#frames.only-phone .device.lp{display:none}
+
+/* ---------- app: status strip ---------- */
+.strip{position:sticky;top:0;z-index:5;display:flex;align-items:stretch;background:#fff;border-bottom:1px solid var(--line);font-size:12px;color:var(--ink2);min-height:36px}
+.strip > div{display:flex;align-items:center;gap:6px;padding:0 12px;border-right:1px solid var(--line);white-space:nowrap}
+.strip > div:last-child{border-right:0}
+.strip b{color:var(--ink);font-weight:600}
+.conn{font-weight:600}
+.conn.off{background:#16191f;color:#fff}
+.conn.on{background:var(--green-bg);color:var(--green)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block}
+.strip .warn{background:var(--amber-bg);color:var(--amber)}
+.strip .warn b{color:var(--amber)}
+.strip .fill{flex:1}
+.strip .sub{color:var(--ink3)}
+.strip .zero b{color:var(--blue)}
+.strip-compact{display:none}
+
+/* ---------- app shell ---------- */
+.shell{display:grid;grid-template-columns:184px 1fr;min-height:calc(100% - 37px)}
+.rail{background:#fff;border-right:1px solid var(--line);padding:14px 10px;font-size:13px}
+.rail .brand{font-weight:700;font-size:13.5px;padding:0 8px 12px}
+.rail .brand span{display:block;font-weight:400;font-size:11px;color:var(--ink3)}
+.rail a{display:flex;gap:8px;align-items:center;padding:7px 8px;border-radius:7px;color:var(--ink2);text-decoration:none}
+.rail a.on{background:var(--gray-bg);color:var(--ink);font-weight:600}
+.rail .grp{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin:14px 8px 4px}
+.content{padding:20px 26px 90px;min-width:0}
+.head{display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.head h1{font-size:21px;margin:0;line-height:1.25}
+.head .crumb{font-size:12px;color:var(--ink3);margin-bottom:3px}
+.head .grow{flex:1;min-width:200px}
+.cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
+.cols.one{grid-template-columns:1fr}
+.stack{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.card h3{font-size:14px;margin:0 0 10px}
+.card h3 .muted{font-weight:400}
+.muted{color:var(--ink3)}
+.small{font-size:12.5px}
+p{margin:0 0 10px;line-height:1.5;font-size:14px}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;font-size:13px}
+.kv dt{color:var(--ink3)} .kv dd{margin:0;word-break:break-all}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.btn{border:1px solid #c9ced8;background:#fff;color:var(--ink);padding:9px 14px;border-radius:8px;font:inherit;font-size:14px;font-weight:600;cursor:default;display:inline-flex;gap:7px;align-items:center}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.blue{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.danger{color:var(--red);border-color:#f0c4c1}
+.btn[disabled]{opacity:.42}
+.btn.sm{padding:5px 10px;font-size:12.5px}
+.disabled-why{font-size:12.5px;color:var(--ink3);margin-top:6px;width:100%}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:99px;white-space:nowrap}
+.b-blue{background:var(--blue-bg);color:var(--blue)} .b-violet{background:var(--violet-bg);color:var(--violet)}
+.b-green{background:var(--green-bg);color:var(--green)} .b-teal{background:var(--teal-bg);color:var(--teal)}
+.b-amber{background:var(--amber-bg);color:var(--amber)} .b-red{background:var(--red-bg);color:var(--red)}
+.b-gray{background:var(--gray-bg);color:var(--gray)} .b-dark{background:#16191f;color:#fff}
+.b-outline{border:1px dashed #a3a9b5;color:var(--ink2);background:#fff}
+input.f{width:100%;font:inherit;font-size:14px;padding:9px 11px;border:1px solid #c9ced8;border-radius:8px;background:#fff}
+label.fl{display:block;font-size:12.5px;font-weight:600;margin:0 0 5px}
+.count{float:right;font-weight:400;color:var(--ink3)}
+.field{margin-bottom:14px}
+
+/* verdict banner */
+.verdict{border-radius:var(--radius);padding:16px 18px;display:flex;gap:14px;align-items:flex-start;border:1px solid transparent}
+.verdict .ic{flex:0 0 38px;height:38px;border-radius:50%;display:grid;place-items:center;font-size:19px;font-weight:700;color:#fff}
+.verdict h2{margin:0 0 4px;font-size:18px}
+.verdict p{margin:0;font-size:13.5px}
+.v-blue{background:var(--blue-bg);border-color:#c8d6fa} .v-blue .ic{background:var(--blue)} .v-blue h2{color:var(--blue)}
+.v-green{background:var(--green-bg);border-color:#bfe3cf} .v-green .ic{background:var(--green)} .v-green h2{color:var(--green)}
+.v-amber{background:var(--amber-bg);border-color:#f3d9a8} .v-amber .ic{background:var(--amber)} .v-amber h2{color:var(--amber)}
+.v-red{background:var(--red-bg);border-color:#f3c6c3} .v-red .ic{background:var(--red)} .v-red h2{color:var(--red)}
+.v-gray{background:var(--gray-bg);border-color:#d9dde3} .v-gray .ic{background:var(--gray)} .v-gray h2{color:var(--ink)}
+
+/* limits box */
+.limits{border-left:3px solid #9aa1ae;background:#fafbfc;padding:10px 12px;border-radius:0 8px 8px 0;font-size:12.5px;color:var(--ink2);line-height:1.5}
+.limits > b{color:var(--ink);display:block;margin-bottom:3px;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+.limits ul{margin:0;padding-left:17px}
+
+/* evidence checks */
+.checks{list-style:none;margin:0;padding:0}
+.checks li{display:grid;grid-template-columns:22px 1fr;gap:4px 10px;padding:10px 0;border-top:1px solid var(--line)}
+.checks li:first-child{border-top:0;padding-top:2px}
+.checks .st{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;margin-top:1px}
+.st.pass{background:var(--blue)} .st.fail{background:var(--red)} .st.inc{background:#fff;color:var(--amber);border:2px dashed var(--amber)} .st.na{background:#c9ced8}
+.checks .nm{font-size:13.5px;font-weight:600;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.checks .rs{grid-column:2;font-size:12.5px;color:var(--ink2);line-height:1.45}
+.chkfoot{font-size:12px;color:var(--blue);margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+
+/* four status tracks */
+.tracks{display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#fff}
+.track{display:grid;grid-template-columns:6px 130px 1fr auto;align-items:center;gap:12px;padding:12px 14px 12px 0;border-top:1px solid var(--line)}
+.track:first-child{border-top:0}
+.track .bar{height:100%;min-height:38px}
+.track .t{font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.track .s{font-size:14px;font-weight:600}
+.track .d{font-size:12.5px;color:var(--ink2);font-weight:400;margin-top:2px}
+.tr-blue .bar{background:var(--blue)} .tr-blue .t{color:var(--blue)}
+.tr-violet .bar{background:var(--violet)} .tr-violet .t{color:var(--violet)}
+.tr-green .bar{background:var(--green)} .tr-green .t{color:var(--green)}
+.tr-teal .bar{background:var(--teal)} .tr-teal .t{color:var(--teal)}
+.track.idle .bar{background:#d5d9e0} .track.idle .s{color:var(--ink3)}
+
+/* transport */
+.tabs{display:flex;border-bottom:1px solid var(--line);margin:-4px 0 14px;gap:4px}
+.tabs span{padding:8px 12px;font-size:13.5px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs span.on{color:var(--ink);border-color:var(--ink)}
+.tabs span.off{color:#b5bac4;text-decoration:line-through}
+.qrwrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+.qrwrap svg{width:250px;height:250px;background:#fff;padding:10px;border:1px solid var(--line);border-radius:10px}
+.frames{font-size:12.5px;color:var(--ink2)}
+.progress{height:8px;background:var(--gray-bg);border-radius:99px;overflow:hidden;width:100%}
+.progress i{display:block;height:100%;background:var(--ink)}
+.camera{aspect-ratio:4/3;background:#23272f;border-radius:10px;position:relative;display:grid;place-items:center;color:#9aa1ae;font-size:13px;overflow:hidden}
+.camera .reticle{width:58%;aspect-ratio:1;border:2px solid rgba(255,255,255,.85);border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.camera .cap{position:absolute;bottom:10px;left:0;right:0;text-align:center;color:#fff;font-size:12.5px}
+.drop{border:2px dashed #c3c8d2;border-radius:10px;padding:22px;text-align:center;font-size:13.5px;color:var(--ink2);background:#fff}
+
+/* checklist */
+.cl{list-style:none;margin:0;padding:0}
+.cl li{display:grid;grid-template-columns:24px 1fr auto;gap:2px 10px;padding:11px 0;border-top:1px solid var(--line);align-items:start}
+.cl li:first-child{border-top:0}
+.cl .t{font-size:14px;font-weight:600}
+.cl .r{grid-column:2/4;font-size:12.5px;color:var(--ink2)}
+.ok{color:var(--green);font-weight:700} .no{color:var(--amber);font-weight:700} .run{color:var(--ink3)}
+.cl .tag{font-size:11.5px}
+
+/* steps */
+.steps{list-style:none;margin:0;padding:0;counter-reset:s}
+.steps li{display:grid;grid-template-columns:26px 1fr auto;gap:2px 10px;padding:9px 0;align-items:center;font-size:13.5px}
+.steps .n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11.5px;font-weight:700;background:var(--gray-bg);color:var(--ink3)}
+.steps .done .n{background:var(--ink);color:#fff}
+.steps .now .n{background:#fff;border:2px solid var(--ink);color:var(--ink)}
+.steps .now{font-weight:600}
+.steps .r{grid-column:2/4;font-size:12px;color:var(--ink3)}
+
+table.t{width:100%;border-collapse:collapse;font-size:12.5px}
+table.t th{text-align:left;font-weight:600;color:var(--ink3);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--line)}
+table.t td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.ticket{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:12px 0;border-top:1px solid var(--line)}
+.ticket:first-of-type{border-top:0}
+.ticket .tt{font-weight:600;font-size:14px}
+.ticket .chips{grid-column:1/3;display:flex;gap:6px;flex-wrap:wrap}
+.roles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.role{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+.role b{display:block;font-size:14.5px;margin-bottom:4px}
+.role span{font-size:12.5px;color:var(--ink2)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.callout{background:#fff8e8;border:1px solid #f1dcae;border-radius:8px;padding:10px 12px;font-size:13px;color:#5b3d00;line-height:1.45}
+.callout.info{background:#eef3fe;border-color:#cfdcfa;color:#1d3c8f}
+.fp{font-family:ui-monospace,Menlo,monospace;font-size:15px;letter-spacing:.06em;background:var(--gray-bg);padding:8px 10px;border-radius:7px;display:inline-block}
+.sizes{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.size{background:var(--gray-bg);border-radius:8px;padding:10px}
+.size .k{font-size:11.5px;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em}
+.size .v{font-size:18px;font-weight:700}
+.size .e{font-size:11.5px;color:var(--ink3)}
+.drawer{position:absolute;top:37px;right:0;bottom:0;width:min(560px,100%);background:#fff;border-left:1px solid var(--line);box-shadow:-12px 0 30px rgba(0,0,0,.08);padding:18px;overflow:auto;z-index:4}
+.scrim{position:absolute;inset:37px 0 0 0;background:rgba(20,23,28,.25);z-index:3}
+
+/* ---------- phone (container query) ---------- */
+@container (max-width: 600px){
+  .strip{font-size:11.5px;min-height:34px}
+  .strip > div:not(.conn):not(.compact-keep){display:none}
+  .strip-compact{display:flex !important;flex:1;justify-content:space-between}
+  .shell{grid-template-columns:1fr}
+  .rail{display:none}
+  .content{padding:14px 14px 110px}
+  .head h1{font-size:19px}
+  .cols,.pair,.roles,.sizes{grid-template-columns:1fr}
+  .track{grid-template-columns:5px 1fr;row-gap:2px}
+  .track > div:nth-child(3){grid-column:2}
+  .track > div:nth-child(4){grid-column:2}
+  .actions.sticky{position:sticky;bottom:0;z-index:2;padding:10px 0 12px;background:rgba(255,255,255,.97);border-top:1px solid var(--line)}
+  .actions.sticky .btn{flex:1;justify-content:center}
+  .qrwrap svg{width:min(330px,100%);height:auto;aspect-ratio:1}
+  .evidence-phone summary{display:list-item}
+  .verdict{padding:14px}
+  .verdict h2{font-size:17px}
+  .drawer{top:34px}
+  .hide-phone{display:none}
+  table.t .hide-phone{display:none}
+}
+.evidence-phone summary{display:none;cursor:default;font-weight:600;font-size:14px;margin-bottom:8px}
+@container (min-width: 601px){ .evidence-phone > summary{display:none} .show-phone{display:none} }
+</style>
+<link rel="stylesheet" href="counterfoil.css">
+</head>
+<body>
+<nav id="index"></nav>
+<section id="stage">
+  <div id="stagebar">
+    <button id="review-toggle" aria-expanded="false" class="review-toggle">Design screens</button>
+    <h2 id="stitle"></h2>
+    <span class="note" id="snote"></span>
+    <div class="seg" id="viewseg"><button data-v="both" class="on">Both</button><button data-v="laptop">Laptop</button><button data-v="phone">Phone</button></div>
+  </div>
+  <div id="frames">
+    <div class="device lp"><span class="lbl">Laptop · 1020 px</span><div class="laptop"><div class="screen" id="lp"></div></div></div>
+    <div class="device ph"><span class="lbl">Phone · 366 px</span><div class="phone"><div class="screen" id="ph"></div></div></div>
+  </div>
+</section>
+
+<script src="counterfoil-demo.js"></script>
+<script>
+/* ================= helpers ================= */
+const VENUE_ID = '03a1c8…9f2c';
+function qr(seed, size=29){
+  let s = 0; for (const c of seed) s = (s*31 + c.charCodeAt(0)) >>> 0;
+  const rnd = () => (s = (s*1664525 + 1013904223) >>> 0) / 4294967296;
+  let r = '';
+  const finder = (x,y) => `<rect x="${x}" y="${y}" width="7" height="7"/><rect x="${x+1}" y="${y+1}" width="5" height="5" fill="#fff"/><rect x="${x+2}" y="${y+2}" width="3" height="3"/>`;
+  const inF = (x,y) => (x<8&&y<8)||(x>size-9&&y<8)||(x<8&&y>size-9);
+  for (let y=0;y<size;y++) for (let x=0;x<size;x++) if(!inF(x,y) && rnd()>.52) r += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
+  return `<svg viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges">${r}${finder(0,0)}${finder(size-7,0)}${finder(0,size-7)}</svg>`;
+}
+const strip = (o={}) => o.scanner?`<div class="strip"><div>Offline · sample</div><div>External requests <b>0 this check</b></div><div>Headers <b>${o.scannerHeight||(scannerDemo.scenario==='missing'?'1,712,388':'1,712,402')}</b> · sample</div><div class="fill"></div><a class="sub" href="#log">Network log ›</a></div>`:o.preparation?`<div class="strip"><div>${preparationDemo.scenario==='offline'?'Offline':'Online'} · sample</div><div>External sync requests <b>${preparationDemo.activity.filter(e=>e[0]!=='Local wallet bridge').length}</b></div><div>Headers <b>${preparationDemo.stage==='done'?'1,712,402':'1,712,388'}</b> · sample</div><div class="fill"></div><a class="sub" href="#log">Network log ›</a></div>`:`<div class="strip"><div>${o.online?'Online':'Offline'} · sample</div><div>External requests <b>0 this check</b></div><div>Headers <b>1,712,388</b> · sample snapshot</div><div class="fill"></div><a class="sub" href="#log">Network log ›</a></div>`;
+let workspace = 'holder';
+let collectionHasDemoTickets=false;
+const rail = (active) => {
+  const items = workspace === 'venue'
+    ? [['venue','Issue ticket','/venue'],['prep','Prepare offline','p1'],['hdr','Headers','h1']]
+    : workspace === 'scanner'
+    ? [['door','Scan ticket','/scanner'],['prep','Prepare offline','p1'],['hdr','Headers','h1']]
+    : [['home','My tickets','/tickets'],['buyer','Receive ticket','b1'],['seller','Transfer ticket','s1'],['prep','Prepare offline','p1'],['hdr','Headers','h1']];
+  const label = workspace === 'venue' ? 'VENUE WORKSPACE' : workspace === 'scanner' ? 'SCANNER WORKSPACE' : 'YOUR TICKET COLLECTION';
+  return `<nav class="rail" aria-label="${label}"><div class="brand">Counterfoil.<span>${label}<br>BSV / TESTNET CONCEPT</span></div>${
+    items.map(([key,label,route]) => `<a href="#${route}" class="${key===active?'on':''}">${label}</a>`).join('')}<div class="rail-note">The proof travels<br>with the ticket.</div></nav>`;
+};
+const head = (crumb, title, badges='') => `<div class="head"><div class="grow"><div class="crumb">${crumb}</div><h1>${title}</h1></div>${badges}</div>`;
+const page = (o, body) => `<div class="proto-label"><span>Design prototype · all values illustrative</span><span>No wallet connected / Testnet concept</span></div>${strip(o.strip)}<div class="shell">${rail(o.rail)}<main class="content">${head(o.crumb,o.title,o.badges||'')}${body}</main></div>${o.overlay||''}`;
+const verdict = (tone, ic, title, sub) => `<div class="verdict v-${tone}"><div class="ic">${ic}</div><div><h2>${title}</h2><p>${sub}</p></div></div>`;
+const limits = (title, items) => `<div class="limits"><b>${title}</b><ul>${items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`;
+const btn = (t, cls='', dis=false) => `<button class="btn ${cls}" ${dis?'disabled':''}>${t}</button>`;
+const sym = {pass:'✓', fail:'✕', inc:'?', na:'–'};
+const CHECK_NAMES = {issuer:'Issuer', continuity:'Ticket continuity', transaction:'Transaction evidence', anchors:'Anchor block(s)', recipient:'Recipient locking key'};
+const checks = (list, foot) => `<div class="card"><h3>Evidence <span class="muted">· checked on this device</span></h3><ul class="checks">${
+  list.map(([k,st,why,extra='']) => `<li><span class="st ${st}">${sym[st]}</span><div class="nm">${CHECK_NAMES[k]} ${extra}</div><div class="rs">${why}</div></li>`).join('')
+}</ul>${foot===false?'':`<div class="chkfoot">${foot || 'Local verification made <b>0</b> external requests and <b>0</b> wallet calls. Snapshot <span class="mono">s-7f3a</span>.'}</div>`}</div>`;
+const evidenceResponsive = (inner, label='Evidence (5 checks)') => `<details class="evidence-phone" open><summary>${label}</summary>${inner}</details>`;
+const track = (tone, name, state, detail, right='', idle=false) => `<div class="track tr-${tone} ${idle?'idle':''}"><div class="bar"></div><div class="t">${name}</div><div><div class="s">${state}</div><div class="d">${detail}</div></div><div>${right}</div></div>`;
+const transportTabs = (on, qrOff=false) => `<div class="tabs"><span class="${on==='qr'?'on':''} ${qrOff?'off':''}">QR</span><span class="${on==='file'?'on':''}">File</span></div>`;
+const sizes = (rows) => `<div class="sizes">${rows.map(([k,v,e])=>`<div class="size"><div class="k">${k}</div><div class="v">${v}</div><div class="e">${e||''}</div></div>`).join('')}</div>`;
+
+const PASS = [
+  ['issuer','pass',`Venue signature valid for trusted venue identity <span class="mono">${VENUE_ID}</span> (pinned in app config). Keys supplied in the package are not trusted.`],
+  ['continuity','pass','Origin <span class="mono">7c4e…a1:0</span> → 2 transfers. Each spends the previous ticket output and creates exactly one successor. Event/ticket IDs and origin match.'],
+  ['transaction','pass','Atomic BEEF targets <span class="mono">e91b…07</span>. All inputs, scripts and signatures valid; unmined transactions trace back to mined ancestors.'],
+  ['anchors','pass','Merkle roots match stored headers at heights <b>1,712,301</b> and <b>1,712,355</b>. Presented transfer: <b>not mined</b>.'],
+  ['recipient','pass','Output locks to the key in your saved request <span class="mono">R-4F2A</span> (fingerprint <span class="mono">02b7 9c1e … e41d</span>).'],
+];
+const BUY_STRIP = {pkg:'18.4 KB', beef:'12.1 KB', contactsThis:0, pkgBytes:'18,842 B package · 12,391 B Atomic BEEF'};
+
+/* ================= screens ================= */
+const S = [];
+const add = (group, id, name, note, render) => S.push({group,id,name,note,render});
+
+
+add('Introduction','landing','Landing · Counterfoil','The introduction. Open My tickets to enter the ticket-holder workspace.',()=>`
+<div class="proto-label"><span>Design prototype · illustrative content</span><span>BSV testnet concept / No wallet connected</span></div>
+<main class="landing">
+ <header class="landing-nav"><a href="#/" class="landing-wordmark">Counterfoil<span>®</span></a><div><button class="landing-text" data-scroll="how">How it works ↓</button><a class="btn" href="#/tickets">Open my tickets ↗</a></div></header>
+ <section class="landing-hero">
+  <div class="hero-copy"><div class="landing-kicker"><span></span> DIRECT HANDOFF / LOCAL VERIFICATION</div><h1>The ticket<br>carries its<br><em>own proof.</em></h1><p>A ticket you can pass directly to someone else. Evidence they can check on their own device—even when the handoff happens offline.</p><a class="btn primary landing-cta" href="#/tickets">Open my tickets</a><div class="hero-footnote">Prepare online. Exchange by QR or file.</div></div>
+  <div class="hero-object"><div class="orbit-label">FROM ONE HAND TO ANOTHER</div><div class="ticket-orbit" aria-hidden="true"></div><div class="floating-ticket"><div class="hero-ticket-main"><div class="ticket-top"><span>COUNTERFOIL / TICKET</span><span>ADMIT ONE</span></div><h2>Your next<br><em>event.</em></h2><div class="hero-ticket-meta"><span>GENERAL ADMISSION<br>ONE TICKET. ITS EVIDENCE.</span><span class="hero-stamp">VENUE<br>SIGNED ↗</span></div></div><div class="hero-ticket-stub"><div><span>ENCLOSED WITH THE TICKET</span><strong>Signature. History. Proof.</strong></div><div class="decorative-bars" aria-hidden="true"></div><small>TICKET ILLUSTRATION</small></div></div><div class="proof-slip"><span class="slip-check">✓</span><div><b>Check the evidence.</b><small>Right on your device.</small></div><span>↗</span></div><div class="motion-row"><span>ILLUSTRATION · NOT LIVE VERIFICATION</span><button class="motion-toggle" aria-pressed="false">Pause motion Ⅱ</button></div></div>
+ </section>
+ <div class="landing-ribbon"><span>VENUE-SIGNED</span><i>✳</i><span>PEER TO PEER</span><i>✳</i><span>PROOF INCLUDED</span><i>✳</i><span>VERIFIED ON DEVICE</span></div>
+ <section class="landing-how" data-section="how"><div class="section-label">01 / THE HANDOFF</div><div class="landing-section-head"><h2>A small exchange.<br><em>Evidence that travels.</em></h2><p>The package carries the ticket’s origin and transfer evidence. Your device checks it against block headers stored beforehand.</p></div><div class="handoff-steps"><article><span class="step-index">01 <i>↗</i></span><h3>Receive the package.</h3><p>Share your receiving request. Get the signed ticket package back by QR code or file.</p></article><article><span class="step-index">02 <i>◎</i></span><h3>Check it locally.</h3><p>Verify the venue signature, transfer history and blockchain evidence on your device.</p></article><article><span class="step-index">03 <i>↘</i></span><h3>Save it. Keep the proof.</h3><p>Accept and save the package locally. Reconnect to broadcast the transfer and track confirmation.</p></article></div></section>
+ <section class="landing-demo" aria-label="Interactive handoff demonstration">
+ <div class="section-label">HOW THE HANDOFF WORKS</div>
+ <div class="landing-section-head"><h2>One ticket.<br><em>Follow its journey.</em></h2><p>Select a stop to see what happens. This walkthrough explains the checks; it does not verify a ticket.</p></div>
+ <div class="journey" data-step="0"><div class="journey-stops" role="group" aria-label="Handoff stages"><button data-journey="0" aria-pressed="true"><span>01</span>Seller</button><button data-journey="1" aria-pressed="false"><span>02</span>Buyer</button><button data-journey="2" aria-pressed="false"><span>03</span>Scanner</button></div><div class="journey-track" aria-hidden="true"><div class="journey-ticket"><small>TICKET / EVIDENCE</small><strong>Your ticket.</strong><span>TICKET + EVIDENCE</span></div></div>
+ <div class="journey-description" aria-live="polite" aria-atomic="true"><span class="journey-status">SELLER / PREPARED OFFLINE</span><h3>Make the transfer for this buyer.</h3><p>The buyer shares a receiving request. The seller checks the ticket’s evidence locally, then uses their wallet to sign a transfer to the buyer’s key. The package goes back by QR or file.</p><small>Both devices were prepared online before the handoff.</small></div><button class="journey-next" data-journey-next>Next: Buyer →</button></div>
+ </section>
+ <section class="landing-evidence"><div class="section-label">02 / INSIDE THE PACKAGE</div><div class="landing-section-head"><h2>What travels<br><em>with your ticket?</em></h2><p>Open each part of the evidence to see what it tells your device.</p></div>
+ <div class="evidence-folds"><details><summary><span>01</span>Venue signature<i aria-hidden="true">+</i></summary><div><h3>Who issued this ticket?</h3><p>The device checks the issuer’s signature against the trusted venue key. A signature from a different key does not establish that this venue issued the ticket.</p><small>TECHNICAL NOTE / Issuer signature and retained issuance evidence.</small></div></details><details><summary><span>02</span>Transaction history<i aria-hidden="true">+</i></summary><div><h3>How did it reach you?</h3><p>The package includes transaction evidence for checking the transfer and its link to the issued ticket. Your device also checks that the new output is locked to your key.</p><small>TECHNICAL NOTE / Atomic BEEF plus retained ticket lineage. Proof shrinking must preserve the evidence needed for ticket authenticity.</small></div></details><details><summary><span>03</span>Block proof<i aria-hidden="true">+</i></summary><div><h3>Where is the history anchored?</h3><p>A Merkle proof connects a mined transaction to a block header stored on your device. An unmined transfer can have mined ancestors; that does not mean the latest transfer is mined.</p><small>TECHNICAL NOTE / SPV checks BUMP Merkle proofs against local headers. Inclusion does not prove current unspentness.</small></div></details></div>
+ </section>
+ <section class="landing-offline"><div><span class="section-label">03 / KNOW WHAT OFFLINE MEANS</span><h2>No connection<br><em>at the handoff.</em></h2><p>Prepare the app, wallet and required headers while online. Then exchange and check the package without contacting a ticketing server.</p></div><div class="offline-receipt"><span class="receipt-caption">THE IMPORTANT DISTINCTION</span><div><b>Verified offline</b><span>Evidence checked locally</span></div><div><b>Pending broadcast</b><span>Transfer still needs submission</span></div><p>Offline verification cannot rule out a double-sale or prove that a ticket is currently unspent. Mining and wallet import are tracked separately.</p><small>Sending files remotely needs a connection. A downloaded package can be checked offline.</small></div></section>
+ <section class="landing-faq"><div class="section-label">04 / BEFORE YOU GO OFFLINE</div><div class="landing-section-head"><h2>A few things<br><em>worth knowing.</em></h2></div><div class="evidence-folds">
+ <details><summary>Must I prepare my device first?<i aria-hidden="true">+</i></summary><div><p>Yes. Load the app, prepare your wallet and sync the required block headers while connected. If a required header is missing, verification is incomplete. Keep the package and reconnect to sync before checking again.</p></div></details>
+ <details><summary>Can I use a file instead of QR?<i aria-hidden="true">+</i></summary><div><p>Yes. Exchange the buyer’s receiving request and the seller’s ticket package as files. Remote delivery needs a connection, but the downloaded package can be checked offline once the device is prepared.</p></div></details>
+ <details><summary>Does accepting offline confirm the transfer?<i aria-hidden="true">+</i></summary><div><p>No. Accept saves the package on your device as “Verified offline — pending broadcast,” so it survives reopening. Reconnect to submit it. Broadcast, mining and wallet import are separate steps.</p></div></details>
+ <details><summary>Can offline verification detect a double-sale?<i aria-hidden="true">+</i></summary><div><p>No. Two conflicting transfers may both pass local checks. They cannot both be confirmed on the same chain. This POC’s scanner requires evidence that the latest transfer is mined and flags unmined transfers for an online check. Even mined inclusion does not rule out an unseen later spend or repeated entry.</p></div></details>
+ </div></section>
+ <section class="landing-close"><span class="landing-kicker">KEEP THE TICKET. KEEP THE EVIDENCE.</span><h2>Ready for the<br><em>next handoff?</em></h2><a class="btn primary" href="#/tickets">Open my tickets</a></section>
+ <footer class="landing-footer"><a class="landing-wordmark" href="#/">Counterfoil.</a><span>OFFLINE TICKET HANDOFF / BSV POC</span><nav aria-label="Other workspaces"><a href="#/venue">Venue ↗</a><a href="#/scanner">Scanner ↗</a></nav><small>Proof of concept. Not a production admission system.</small></footer>
+</main>`);
+
+/* ---- Global ---- */
+const homeView = () => page(
+ {rail:'home',crumb:'YOUR COLLECTION / THIS DEVICE',title:'My tickets.'},
+ `<div class="home-intro"><p>Receive it. Keep the proof. Pass it on.</p><div class="home-actions"><a class="btn primary" href="#b1">Receive a ticket</a><button class="btn" disabled>Transfer a ticket</button></div></div><div class="home-prepare"><span class="prepare-mark" aria-hidden="true">↯</span><div><b>Start with this device</b><p>Check wallet access and sync headers before going offline.</p></div><a href="#prep">Prepare for offline use ↗</a></div>
+<section class="home-empty"><div class="empty-stub" aria-hidden="true"><span>COUNTERFOIL / ADMIT ONE</span><i>Yours, soon.</i><b>— — — — — — — — — —</b></div><div><span class="home-eyebrow">A TICKET. ITS OWN EVIDENCE.</span><h2>No tickets<br>saved yet.</h2><p>Your next event starts with a receiving request. Exchange it with the sender by QR or file.</p><a class="btn primary" href="#b1">Receive your first ticket</a><small>Transfers become available once you have a ticket.</small></div></section><footer class="home-foot"><span>LOCAL STORAGE / YOUR DEVICE</span><p>Accepted tickets will appear here. Clearing browser data can remove saved packages.</p></footer>`);
+add('Ticket holder','home','My tickets','Your ticket collection.',()=>homeView());
+add('Ticket holder','home-empty','My tickets','Your ticket collection.',()=>homeView());
+
+add('Ticket holder','b1','Receive a ticket','Create a receiving request before accepting a ticket package.',()=>page(
+ {rail:'buyer',crumb:'MY TICKETS / RECEIVE',title:'Receive a ticket.'},
+ `<div class="receive-flow"><a href="#/tickets" class="receive-back">← My tickets</a><ol class="receive-steps"><li aria-current="step"><span>01</span> Share your request</li><li><span>02</span> Receive package</li><li><span>03</span> Verify & save</li></ol><div class="request-start"><span class="home-eyebrow">A HANDOFF STARTS WITH YOU</span><h2>Give the seller<br><em>somewhere to send it.</em></h2><p>Your wallet supplies a receiving key. Once connected, you can create a request and share it by QR or file.</p><div class="request-notice"><b>Wallet not connected</b><p>Wallet integration is not available in this interface yet. No receiving request has been created.</p></div><div class="request-start-actions"><button class="btn primary" disabled>Create receiving request</button><a href="#prep">Check preparation</a></div></div></div>`));
+
+[{"group":"Global","id":"strip","name":"Status strip (anatomy)"},{"group":"Global","id":"log","name":"Network log (drawer)"},{"group":"Global","id":"prep","name":"P1 · Prepare for offline use"},{"group":"Global","id":"prep2","name":"P2 · Preparation complete"},{"group":"Global","id":"prep3","name":"P3 · Missing after disconnecting"},{"group":"Global","id":"hdr","name":"H1 · Headers & snapshot"},{"group":"Global","id":"hdr2","name":"H2 · Header source conflict"},{"group":"Scene 1 · Issue","id":"v1","name":"V1 · Issue ticket"},{"group":"Scene 1 · Issue","id":"v2","name":"V2 · Issuing (progress)"},{"group":"Scene 1 · Issue","id":"v3","name":"V3 · Issued"},{"group":"Scene 2 · Resale","id":"s1","name":"S1 · Seller: my tickets"},{"group":"Scene 2 · Resale","id":"s2","name":"S2 · Seller: import request"},{"group":"Scene 2 · Resale","id":"s3","name":"S3 · Seller: confirm recipient"},{"group":"Scene 2 · Resale","id":"s4","name":"S4 · Seller: wallet signing"},{"group":"Scene 2 · Resale","id":"s5","name":"S5 · Seller: share package (QR + file)"},{"group":"Scene 2 · Resale","id":"s5f","name":"S5f · Package too large for QR"},{"group":"Scene 2 · Resale","id":"b2","name":"B2 · Buyer: receiving package"},{"group":"Scene 2 · Resale","id":"b3","name":"B3 · Buyer: verified → Accept"},{"group":"Scene 2 · Resale","id":"b4","name":"B4 · Buyer: verification incomplete"},{"group":"Scene 2 · Resale","id":"b5","name":"B5 · Buyer: rejected"},{"group":"Scene 2 · Resale","id":"b6","name":"B6 · Buyer: accepted"},{"group":"Scene 2 · Resale","id":"b7","name":"B7 · Buyer: after reconnecting"},{"group":"Scanner","id":"d0","name":"D0 · Scanner: scan"},{"group":"Scanner","id":"d1","name":"D1 · Scanner: passes POC policy"},{"group":"Scanner","id":"d2","name":"D2 · Scanner: online check required"},{"group":"Scanner","id":"d3","name":"D3 · Scanner: verification incomplete"},{"group":"Scanner","id":"d4","name":"D4 · Scanner: rejected"},{"group":"Scene 4 · Fake","id":"f1","name":"F1 · Fake tickets"},{"group":"Scene 5 · Double-sell","id":"x1","name":"X1 · Two buyers, both verified offline"},{"group":"Scene 5 · Double-sell","id":"x2","name":"X2 · After reconnecting"},{"group":"Scene 5 · Double-sell","id":"z1","name":"Z1 · Proof size comparison"}].forEach(s=>add(s.group,s.id,s.name,'',()=>''));
+
+// Each fixture is independent so real data can replace one screen at a time.
+const demoLink=(label,id)=>`<a class="btn" href="#${id}">${label}</a>`;
+const demoFacts=rows=>`<dl class="kv">${rows.map(([key,value])=>`<dt>${key}</dt><dd>${value}</dd>`).join('')}</dl>`;
+S.forEach(screen=>{
+ const fixture=DEMO_SCREENS[screen.id];if(!fixture)return;
+ const [title,description,facts,actions]=fixture;
+ screen.note='Demo data · no live wallet or blockchain operation.';
+ screen.render=()=>page({strip:{online:['b7','log','hdr','hdr2'].includes(screen.id)},rail:screen.id.startsWith('d')?'door':screen.id.startsWith('v')?'venue':screen.id.startsWith('s')?'seller':'buyer',crumb:'DESIGN PREVIEW / DEMO DATA',title},`<div class="cols"><section class="card"><h3>${title}</h3><p class="small muted">${description}</p>${demoFacts(facts)}<div class="actions">${actions.map(([label,id])=>demoLink(label,id)).join('')}</div></section><aside class="callout">Illustrative state for design review. Values and results are sample data; no signing, verification, broadcast or admission has occurred.</aside></div>`);
+});
+const emptyHome=S.find(s=>s.id==='home-empty').render;
+const demoHomeTabs=empty=>`<div class="home-preview"><span>DESIGN PREVIEW / SAMPLE STATES</span><div><a href="#home-empty" ${empty?'aria-current="page"':''}>First visit</a><a href="#home" ${!empty?'aria-current="page"':''}>Saved tickets</a></div></div>`;
+S.find(s=>s.id==='home-empty').render=()=>emptyHome().replace('<div class="home-intro">',demoHomeTabs(true)+'<div class="home-intro">');
+S.find(s=>s.id==='home').render=()=>page({rail:'home',crumb:'YOUR COLLECTION / DEMO DATA',title:'My tickets.'},`${demoHomeTabs(false)}<div class="home-intro"><p>Receive it. Keep the proof. Pass it on.</p><div class="home-actions">${demoLink('Receive a ticket','b1')}${demoLink('Transfer a ticket','s1')}</div></div><div class="home-prepare"><span class="prepare-mark">↯</span><div><b>Before your next handoff</b><p>Review wallet access and required headers before disconnecting.</p></div><a href="#prep">Prepare for offline use ↗</a></div><div class="home-grid"><article class="collection-ticket"><div class="ticket-art"><div class="ticket-top"><span>GENERAL ADMISSION</span><span>DEMO / GA-0142</span></div><h2>Harbour<br><em>Nights.</em></h2><div class="ticket-bottom">ONE TICKET. ITS EVIDENCE.</div></div><div class="ticket-receipt"><div class="receipt-title">Verified offline — pending broadcast</div><p>Saved on this device · illustrative record.</p><dl class="home-tracks"><div><dt>Verification</dt><dd>Passed locally</dd></div><div><dt>Broadcast</dt><dd>Not submitted</dd></div><div><dt>Mining</dt><dd>No proof yet</dd></div><div><dt>Wallet import</dt><dd>Not attempted</dd></div></dl><a class="receipt-link" href="#b6">View ticket & evidence ↗</a><a class="receipt-link" href="#b7">Review broadcast status ↗</a></div></article><div class="home-side"><article class="incomplete-ticket"><span class="home-eyebrow">SAVED PACKAGE / NEEDS ATTENTION</span><h2>One more check.</h2><span class="badge b-amber">Verification incomplete</span><p>A required block header is missing. This package has not been accepted.</p><a class="receipt-link" href="#b4">Review missing evidence ↗</a><a class="receipt-link" href="#prep">Prepare & sync headers ↗</a></article><aside class="handoff-note"><h3>Keep the package.<br>Keep the evidence.</h3><p>Offline acceptance does not confirm the transfer or rule out a double-sale.</p></aside></div></div>`);
+S.find(s=>s.id==='b1').render=()=>page({rail:'buyer',crumb:'RECEIVE / DEMO DATA',title:'Receive a ticket.'},`<div class="receive-flow"><a class="receive-back" href="#/tickets">← My tickets</a><ol class="receive-steps"><li aria-current="step"><span>01</span>Share your request</li><li><span>02</span>Receive package</li><li><span>03</span>Verify & save</li></ol><div class="request-start"><span class="home-eyebrow">A HANDOFF STARTS WITH YOU</span><h2>Give the seller<br><em>somewhere to send it.</em></h2><p>Your wallet supplies a receiving key. The app saves the request before you share it.</p><button class="btn primary" data-request-create>Preview request creation ↗</button><p class="small muted">Demo only. No wallet call or real saved request.</p></div><div class="request-ready" hidden><div class="request-confirm"><span>✓</span><div><b>Receiving request ready · sample</b><p>The real app shows this only after wallet access and local saving succeed.</p></div></div><div class="request-layout"><section class="request-share"><div class="request-methods" role="group" aria-label="Sharing method"><button data-request-method="qr" aria-pressed="true">Show QR</button><button data-request-method="file" aria-pressed="false">Share a file</button></div><div data-request-panel="qr"><div class="request-caption"><h2>A request.<br><em>Not your ticket.</em></h2></div><div class="qrwrap">${qr('R-4F2A')}<span class="frames">Illustration only · not scannable</span></div><p class="request-instruction">Ask the seller to scan your request, then return a signed ticket package.</p></div><div data-request-panel="file" hidden><div class="request-caption"><h2>Send the request.<br><em>Keep it direct.</em></h2></div><div class="request-file"><b>receiving-request-demo.json</b><small>ILLUSTRATIVE FILE / NOT A VALID WALLET REQUEST</small></div><p class="request-instruction">Send through your chosen channel. Remote delivery needs connectivity; checking a downloaded package can happen offline.</p><button class="btn" data-request-download>Download illustrative file ↓</button></div></section><aside class="request-aside"><h3>Made for your key.</h3>${demoFacts([['Request','R-4F2A'],['Network','BSV testnet'],['Key fingerprint','02b7 9c1e … e41d']])}<p>Compare this fingerprint with the seller before signing. Your private key stays in your wallet.</p><div class="request-notice">Sharing a request does not transfer a ticket. Receive, verify and accept the returned package.</div></aside></div><div class="request-next"><p>Has the seller sent the package back?</p>${demoLink('Next: receive ticket ↗','b2')}</div></div></div>`);
+
+// Buyer-flow simulation. No file parsing, camera access or cryptographic checks.
+let buyerDemo={method:'qr',stage:'idle',outcome:'pass'};
+const buyerSteps=step=>`<ol class="receive-steps">${['Share request','Receive package','Verify & save'].map((label,i)=>`<li ${i===step?'aria-current="step"':''}><span>0${i+1}</span>${label}</li>`).join('')}</ol>`;
+const buyerContext=()=>`<aside class="request-aside"><span class="home-eyebrow">YOUR SAVED REQUEST / DEMO</span><h3>Expected by you.</h3>${demoFacts([['Request','R-4F2A'],['Recipient fingerprint','02b7 9c1e … e41d'],['Network','BSV testnet']])}<div class="request-notice"><b>Receive first. Verify next.</b><p>Receiving the bytes does not establish authenticity. Your device checks the returned package against this request.</p></div></aside>`;
+function buyerTransport(){
+ const {method,stage,outcome}=buyerDemo;
+ let body='';
+ if(stage==='camera-error')body=`<div class="verdict v-amber" role="alert"><div class="ic">!</div><div><h2>Camera unavailable</h2><p>Permission was denied. You can retry or import the seller’s file.</p></div></div><div class="actions"><button class="btn" data-buyer="reset">Retry camera</button><button class="btn primary" data-buyer="file">Use a file instead</button></div>`;
+ else if(stage==='file-error')body=`<div class="verdict v-amber" role="alert"><div class="ic">!</div><div><h2>This is not a ticket package</h2><p>A receiving-request file was selected. Ask the seller for the signed ticket package. Nothing has been accepted.</p></div></div><button class="btn" data-buyer="reset">Choose another sample</button>`;
+ else if(stage==='loading')body=`<div class="package-loader"><span class="home-eyebrow">${method==='qr'?'RECONSTRUCTING QR FRAMES':'READING PACKAGE'} / SIMULATED</span><h2>${method==='qr'?'Keep the code in view.':'Reading the file.'}</h2><progress max="100" value="68" aria-label="Sample package loading progress">68%</progress><p>68% ${method==='qr'?'· 27 frames received':'· harbour-nights.ticket'}</p></div><div class="actions"><button class="btn primary" data-buyer="complete">Preview completed receipt</button><button class="btn" data-buyer="reset">Cancel</button></div>`;
+ else if(stage==='ready')body=`<div class="request-confirm" role="status"><span>↘</span><div><b>Package received · not verified</b><p>harbour-nights.ticket · 18.4 KB · sample</p></div></div><p class="request-instruction">The next step checks issuer authenticity, ticket continuity, transaction evidence, block proofs and the recipient key.</p><div class="actions"><button class="btn primary" data-buyer="verify">Preview local verification ↗</button><button class="btn" data-buyer="reset">Choose another package</button></div>`;
+ else if(method==='qr')body=`<div class="camera"><div class="reticle"></div><div class="cap">Point at the seller’s ticket-package QR<br>Camera preview only · camera is not running</div></div><p class="request-instruction">Keep the animated code in view until all frames arrive.</p><div class="actions"><button class="btn primary" data-buyer="load">Preview scan</button><button class="btn" data-buyer="camera-error">Preview camera denied</button></div>`;
+ else body=`<div class="request-file"><span aria-hidden="true">↓</span><b>Import the seller’s ticket package</b><small>DEMO FILE CHOICES / NO DEVICE FILES ARE READ</small><p>Choose the signed package returned by the seller, not your receiving request.</p></div><div class="actions"><button class="btn primary" data-buyer="load">Select sample ticket file</button><button class="btn" data-buyer="file-error">Select wrong file example</button></div>`;
+ return page({rail:'buyer',crumb:'RECEIVE / DEMO DATA',title:'Receive the package.'},`<div class="receive-flow">${buyerSteps(1)}<div class="buyer-scenarios"><label>DEMO VERIFICATION RESULT <select data-buyer-outcome>${[['pass','All checks pass'],['missing','Required header missing'],['issuer','Wrong venue signature'],['recipient','Wrong recipient key']].map(([value,label])=>`<option value="${value}" ${outcome===value?'selected':''}>${label}</option>`).join('')}</select></label><span>Sample states only. No verification is performed.</span></div><div class="request-layout"><section class="request-share"><div class="request-methods" role="group" aria-label="Receive package method"><button data-buyer="qr" aria-pressed="${method==='qr'}">Scan QR</button><button data-buyer="file" aria-pressed="${method==='file'}">Import file</button></div><div class="buyer-transport" aria-live="polite">${body}</div></section>${buyerContext()}</div><a class="receive-back" href="#b1">← Back to receiving request</a></div>`);
+}
+S.find(s=>s.id==='b2').render=buyerTransport;
+const buyerEvidence=(outcome)=>{
+ const rows=[['Venue signature',outcome==='issuer'?'Rejected — different issuer key':'Matches trusted venue'],['Ticket continuity','Links to issued GA-0142'],['Transaction evidence','Passed locally'],['Block proofs',outcome==='missing'?'Incomplete — header 1,712,402 missing':'Match stored headers'],['Recipient key',outcome==='recipient'?'Rejected — output is locked to another key':'Matches request R-4F2A']];
+ if(outcome==='issuer')rows.slice(1).forEach(row=>row[1]='Not evaluated — issuer check failed');
+ return `<section class="card"><h3>Evidence checked on this device</h3><ul class="checks">${rows.map(([name,value])=>{const bad=/Rejected|Incomplete|Not evaluated/.test(value);return `<li><span class="st ${bad?'inc':'pass'}">${bad?'!':'✓'}</span><div class="nm">${name}</div><div class="rs">${value}</div></li>`}).join('')}</ul><p class="small muted">Illustrative checks · 0 external requests during local verification.</p></section>`;
+};
+function buyerResult(kind){
+ const missing=kind==='missing',rejected=kind==='rejected';const outcome=missing?'missing':rejected?(buyerDemo.outcome==='recipient'?'recipient':'issuer'):'pass';
+ const title=missing?'Verification incomplete':rejected?'Ticket rejected':'Ready for your decision.';
+ const reason=missing?'Required block header missing.':rejected?(outcome==='recipient'?'Ticket output does not match your receiving key.':'Issuer signature does not match the trusted venue.'):'All local checks passed. The latest transfer is not mined.';
+ return page({rail:'buyer',crumb:'VERIFY / DEMO DATA',title},`<div class="receive-flow">${buyerSteps(2)}<div class="cols"><div class="stack"><div class="verdict ${missing?'v-amber':rejected?'v-red':'v-blue'}"><div class="ic">${missing?'!':rejected?'×':'✓'}</div><div><h2>${reason}</h2><p>Harbour Nights · GA-0142 · request R-4F2A</p></div></div><section class="card"><h3>${missing?'Keep your progress':rejected?'Do not accept this package':'Before you accept'}</h3><p class="small">${missing?'The package remains incomplete. Reconnect and sync the required header, then run verification again.':rejected?'The package has not been accepted. Ask the seller to correct it or send a different ticket.':'Offline verification cannot rule out a double-sale or prove current unspentness. Accepting saves the package; it does not broadcast or confirm the transfer.'}</p><div class="actions">${missing?'<button class="btn" disabled>Accept unavailable</button><a class="btn" href="#prep">Prepare & sync</a><button class="btn primary" data-buyer="retry">Preview synced retry</button>':rejected?'<a class="btn primary" href="#b2">Receive another package</a>':'<button class="btn primary" data-buyer="accept">Accept & save · demo</button><button class="btn" data-buyer="decline">Decline package</button>'}</div><p class="small muted" data-buyer-notice role="status"></p></section></div>${buyerEvidence(outcome)}</div></div>`);
+}
+S.find(s=>s.id==='b3').render=()=>buyerResult('pass');
+S.find(s=>s.id==='b4').render=()=>buyerResult('missing');
+S.find(s=>s.id==='b5').render=()=>buyerResult('rejected');
+S.find(s=>s.id==='b6').render=()=>page({rail:'buyer',crumb:'ACCEPTED / DEMO DATA',title:'Keep the ticket. Keep the proof.'},`<div class="receive-flow">${buyerSteps(2)}<div class="verdict v-blue"><div class="ic">✓</div><div><h2>Verified offline — pending broadcast</h2><p>Harbour Nights · GA-0142 · example accepted state.</p></div></div><div class="cols"><section class="card"><h3>What happens next?</h3><p>In the working app, the package is saved before this screen appears and survives reopening. Reconnect to broadcast the transfer.</p><p class="small muted">This preview does not save a real ticket. Mining and wallet import are separate steps.</p><div class="actions">${demoLink('My tickets','home')}${demoLink('Preview reconnecting','b7')}</div></section><section class="card"><h3>Four separate states</h3>${demoFacts([['Verification','Passed locally'],['Broadcast','Not submitted'],['Mining','Not mined'],['Wallet import','Not attempted']])}</section></div></div>`);
+
+// Seller simulation: all keys, wallet results and packages are illustrative.
+let sellerDemo={checked:false,method:'qr',request:'valid',importState:'idle',confirmed:false,wallet:'waiting',share:'qr'};
+const sellerSteps=step=>`<ol class="receive-steps">${['Choose & check','Confirm buyer','Sign & share'].map((label,i)=>`<li ${i===step?'aria-current="step"':''}><span>0${i+1}</span>${label}</li>`).join('')}</ol>`;
+const sellerButton=(label,action,disabled=false)=>`<button class="btn" data-seller="${action}" ${disabled?'disabled':''}>${label}</button>`;
+const sellerTicket=()=>`<article class="collection-ticket"><div class="ticket-art"><div class="ticket-top"><span>GENERAL ADMISSION</span><span>DEMO / GA-0142</span></div><h2>Harbour<br><em>Nights.</em></h2><div class="ticket-bottom">VENUE-SIGNED · SAMPLE TICKET</div></div><div class="ticket-receipt">${demoFacts([['Current output','Mined · block 1,712,355'],['Ticket','GA-0142'],['Local check',sellerDemo.checked?'Passed · sample result':'Not checked this session']])}<p class="small muted">Mined inclusion does not prove current unspentness.</p></div></article>`;
+S.find(s=>s.id==='s1').render=()=>page({rail:'seller',crumb:'TRANSFER / DEMO DATA',title:'Choose a ticket.'},`<div class="receive-flow">${sellerSteps(0)}<div class="request-layout">${sellerTicket()}<section class="request-aside"><span class="home-eyebrow">BEFORE THE HANDOFF</span><h3>Check what you’re sending.</h3><p>Check the issuer, ticket history and transaction evidence against stored headers before preparing a new transfer.</p><div class="request-notice" role="status">${sellerDemo.checked?'Sample local check passed. Ready to receive the buyer’s request.':'Run the local-check preview to continue.'}</div><div class="actions">${sellerButton('Preview local check','check')}${sellerButton('Next: buyer’s request ↗','request',!sellerDemo.checked)}</div><p class="small muted">No cryptographic verification runs in this preview.</p></section></div></div>`);
+function sellerImport(){
+ const error=sellerDemo.importState==='error';const camera=sellerDemo.importState==='camera-error';
+ const reasons={type:'This is a ticket package, not a receiving request.',version:'This receiving-request version is not supported.',network:'This request is for a different network.',key:'The recipient key is missing or malformed.'};
+ return page({rail:'seller',crumb:'TRANSFER / DEMO DATA',title:'Who is receiving it?'},`<div class="receive-flow">${sellerSteps(1)}<div class="buyer-scenarios"><label>DEMO REQUEST <select data-seller-request>${[['valid','Valid receiving request'],['type','Wrong file type'],['version','Unsupported version'],['network','Wrong network'],['key','Invalid receiving key']].map(([v,l])=>`<option value="${v}" ${sellerDemo.request===v?'selected':''}>${l}</option>`).join('')}</select></label><span>No camera access or device files are read.</span></div><div class="request-layout"><section class="request-share"><div class="request-methods" role="group" aria-label="Import receiving request"><button data-seller="qr" aria-pressed="${sellerDemo.method==='qr'}">Scan QR</button><button data-seller="file" aria-pressed="${sellerDemo.method==='file'}">Import file</button></div><div class="buyer-transport" aria-live="polite">${camera?`<div class="verdict v-amber"><div class="ic">!</div><div><h2>Camera unavailable</h2><p>Permission was denied. Retry or use a file.</p></div></div><div class="actions">${sellerButton('Retry camera','qr')}${sellerButton('Import file instead','file')}</div>`:error?`<div class="verdict v-red"><div class="ic">×</div><div><h2>Request cannot be used</h2><p>${reasons[sellerDemo.request]||'Invalid receiving request.'}</p></div></div><p>No signing request was sent to the wallet.</p>${sellerButton('Try another request','reset-import')}`:`${sellerDemo.method==='qr'?'<div class="camera"><div class="reticle"></div><div class="cap">Scan the buyer’s receiving request<br>Illustration only · camera is not running</div></div>':'<div class="request-file"><span>↙</span><b>buyer-receiving-request.json</b><small>SELECT A SAMPLE REQUEST / NO FILES ARE READ</small></div>'}<div class="actions">${sellerButton(sellerDemo.method==='qr'?'Preview scan':'Preview file import','import')}${sellerDemo.method==='qr'?sellerButton('Preview camera denied','camera-error'):''}</div>`}</div></section><aside class="request-aside"><h3>The buyer goes first.</h3><p>Ask the buyer to create a receiving request and share it by QR or file. Use their receiving key, not a key typed from memory.</p>${demoFacts([['Ticket to transfer','Harbour Nights · GA-0142'],['Expected network','BSV testnet']])}<p>Remote file delivery needs a connection. A prepared device can check the downloaded request offline.</p></aside></div></div>`);
+}
+S.find(s=>s.id==='s2').render=sellerImport;
+S.find(s=>s.id==='s3').render=()=>page({rail:'seller',crumb:'TRANSFER / DEMO DATA',title:'Confirm the buyer.'},`<div class="receive-flow">${sellerSteps(1)}<div class="request-layout"><section class="request-start"><span class="home-eyebrow">RECEIVING KEY / SAMPLE FINGERPRINT</span><h2 class="recipient-fingerprint">02b7 9c1e<br><em>… e41d</em></h2><p>Compare this fingerprint with the buyer’s receiving-request screen before signing.</p>${demoFacts([['Request','R-4F2A'],['Network','BSV testnet'],['Ticket','Harbour Nights · GA-0142']])}<label class="recipient-confirm"><input type="checkbox" data-seller-confirm ${sellerDemo.confirmed?'checked':''}> I compared the fingerprint with the buyer.</label><div class="actions">${sellerButton('Preview wallet authorization ↗','authorize',!sellerDemo.confirmed)}${sellerButton('Use a different request','reset-import')}</div></section><aside class="request-aside"><h3>One recipient.<br>One signed transfer.</h3><p>The new ticket output will be locked to this buyer’s key. Your wallet signs the transaction; the app never receives your private keys.</p><div class="request-notice">Signing does not broadcast. The buyer receives the package and checks it before accepting.</div></aside></div></div>`);
+function sellerWallet(){
+ const cancelled=sellerDemo.wallet==='cancelled',failed=sellerDemo.wallet==='failed';
+ return page({rail:'seller',crumb:'TRANSFER / DEMO DATA',title:cancelled?'Signing cancelled.':failed?'Wallet could not sign.':'Authorize in your wallet.'},`<div class="receive-flow">${sellerSteps(2)}<div class="cols"><section class="request-start"><span class="home-eyebrow">SIMULATED WALLET RESPONSE</span><h2>${cancelled?'Nothing was signed.':failed?'The wallet is unavailable.':'Waiting for<br><em>your signature.</em>'}</h2><p>${cancelled?'You declined the wallet request. No signed package was produced and nothing was broadcast.':failed?'The wallet bridge is unavailable. Reconnect the wallet and retry; no package has been produced.':'Review the ticket and recipient in your wallet. This preview does not open a wallet or create a transaction.'}</p><div class="actions">${cancelled||failed?sellerButton('Retry authorization','retry-wallet')+sellerButton('Review recipient','recipient'):sellerButton('Preview approved signature','signed')+sellerButton('Preview cancellation','cancel-wallet')+sellerButton('Preview wallet unavailable','fail-wallet')}</div></section><section class="card"><h3>What you are authorizing</h3>${demoFacts([['Ticket','Harbour Nights · GA-0142'],['Recipient','02b7 9c1e … e41d'],['Broadcast','Disabled · noSend: true'],['Result','Signed transfer with Atomic BEEF']])}<p class="small muted">Payment is outside this POC.</p></section></div></div>`);
+}
+S.find(s=>s.id==='s4').render=sellerWallet;
+function sellerShare(large=false){
+ const file=large||sellerDemo.share==='file';
+ return page({rail:'seller',crumb:'TRANSFER / DEMO DATA',title:'Pass the package on.'},`<div class="receive-flow">${sellerSteps(2)}<div class="request-confirm"><span>↗</span><div><b>Signed package ready · demo</b><p>Not broadcast. Waiting for the buyer to receive and check it.</p></div></div>${large?'<div class="callout">82 KB exceeds the POC’s 64 KiB QR limit. Share a file instead.</div>':''}<div class="request-layout"><section class="request-share"><div class="request-methods" role="group" aria-label="Share signed package"><button data-seller="share-qr" aria-pressed="${!file}" ${large?'disabled':''}>Show QR</button><button data-seller="share-file" aria-pressed="${file}">Share file</button></div><div class="buyer-transport">${file?`<div class="request-file"><span>↗</span><b>ticket-package-demo.json</b><small>ILLUSTRATIVE FILE / NOT A VALID TRANSACTION</small></div><p class="request-instruction">Send the signed package through your chosen channel. Remote delivery needs connectivity.</p>${sellerButton('Download illustrative package ↓','download')}`:`<div class="qrwrap">${qr('SIGNED-DEMO')}<span class="frames">Animated QR placeholder · not scannable</span></div><p class="request-instruction">Keep the QR visible until the buyer has received every frame. They verify it next on their own device.</p>`}</div></section><aside class="request-aside"><h3>The buyer checks next.</h3>${demoFacts([['Ticket','GA-0142 · Harbour Nights'],['Request','R-4F2A'],['Package size',large?'82 KB':'18.4 KB'],['Broadcast','Not submitted']])}<div class="request-notice">There is no automatic acknowledgement from the buyer. Sharing a package does not prove acceptance, confirmation or payment.</div><div class="actions">${demoLink('Preview buyer receipt ↗','b2')}${demoLink(large?'Standard package example':'Large package example',large?'s5':'s5f')}</div></aside></div></div>`);
+}
+S.find(s=>s.id==='s5').render=()=>sellerShare();
+S.find(s=>s.id==='s5f').render=()=>sellerShare(true);
+
+// Offline preparation is a deterministic design simulation, never a live sync.
+let preparationDemo={stage:'idle',scenario:'ready',activity:[]};
+const prepStatus=()=>preparationDemo.stage==='done'?'Checks complete':preparationDemo.stage==='syncing'?'Syncing headers':preparationDemo.stage==='error'?'Needs attention':'Not checked yet';
+function preparationView(){
+ const {stage,scenario}=preparationDemo,done=stage==='done',running=stage==='syncing',error=stage==='error';
+ const errorText={offline:'You are offline. Reconnect to fetch the required headers; your existing snapshot is retained.',wallet:'Wallet access failed. Open the wallet and reconnect before retrying.',conflict:'Header sources disagree. Keep the existing snapshot and retry with consistent sources.',missing:'The available snapshot does not contain block 1,712,402. Keep the package and sync again when connected.'};
+ const row=(name,status,detail)=>`<li><span class="st ${status==='Complete'?'pass':'inc'}">${status==='Complete'?'✓':'○'}</span><div class="nm">${name}<span class="prep-check-status">${status}</span></div><div class="rs">${detail}</div></li>`;
+ const local=done||running;
+ return page({rail:'prep',strip:{preparation:true},crumb:'BEFORE DISCONNECTING / DEMO DATA',title:'Prepare this device.'},`<div class="receive-flow"><div class="home-intro"><p>A little preparation.<br>Evidence you can carry offline.</p></div><div class="buyer-scenarios"><label>DEMO PREPARATION SCENARIO<select data-preparation-scenario>${[['ready','Successful preparation'],['offline','Offline before syncing'],['wallet','Wallet unavailable'],['conflict','Header sources disagree'],['missing','Required header missing']].map(([value,label])=>`<option value="${value}" ${scenario===value?'selected':''}>${label}</option>`).join('')}</select></label><span>Simulated checks only. No headers are downloaded and no wallet is contacted.</span></div><div class="request-layout"><section class="card"><span class="home-eyebrow">${workspace==='scanner'?'SCANNER':workspace==='venue'?'VENUE':'TICKET HOLDER'} / THIS DEVICE</span><h3 class="prep-title">${prepStatus()}</h3><ul class="checks">${row('App available offline',local?'Complete':'Not checked','App assets available after reopening.')}${row('Local storage',local?'Complete':'Not checked','Storage available; clearing browser data can still remove packages.')}${row(workspace==='scanner'?'Trusted venue identity':'Wallet & key access',local?'Complete':error&&scenario==='wallet'?'Unavailable':'Not checked',workspace==='scanner'?'Pinned issuer identity available.':'Wallet bridge and required key access checked.')}${row('Required block headers',done?'Complete':running?'In progress':error?'Needs attention':'Not checked','Check proof of work, linkage and agreement between two sources.')}${row(workspace==='holder'?'Ticket & signing evidence':'Verification evidence',done?'Complete':'Not checked',workspace==='holder'?'Check stored package and funding proofs before transferring.':'Check evidence needed for this workspace.')}</ul>${running?'<div class="package-loader" role="status"><span class="home-eyebrow">HEADER SYNC / SIMULATED</span><progress max="445" value="412" aria-label="Header sync progress">412 of 445</progress><p>412 / 445 headers · validating before storage</p></div>':''}${error?`<div class="callout" role="alert">${errorText[scenario]}</div>`:''}${done?'<div class="request-confirm" role="status"><span>✓</span><div><b>Listed checks complete · sample</b><p>Snapshot s-7f4b is available in this example.</p></div></div>':''}<div class="actions">${running?'<button class="btn primary" data-preparation="finish">Preview sync result</button><button class="btn" data-preparation="cancel">Cancel sync</button>':`<button class="btn primary" data-preparation="start">${stage==='idle'?'Preview preparation checks':'Run checks again'}</button>`}${done?demoLink(workspace==='scanner'?'Open scanner':workspace==='venue'?'Open issuance':'My tickets',workspace==='scanner'?'d0':workspace==='venue'?'v1':'home'):''}</div></section><aside class="request-aside"><span class="home-eyebrow">YOUR HEADER SNAPSHOT</span><h3>Stored here.<br>Checked here.</h3>${demoFacts([['Headers through',done?'1,712,402':'1,712,388'],['Snapshot',done?'s-7f4b':'s-7f3a'],['Last successful sync',done?'Just now · sample':'2 hours ago · sample'],['Required for sample package','Block 1,712,402']])}<div class="request-notice"><b>What preparation cannot guarantee</b><p>Future tickets may need newer headers. Offline signing must be tested with the actual wallet. A header snapshot cannot reveal an unseen later spend.</p></div><div class="actions">${demoLink('Inspect headers','hdr')}${demoLink('View network log','log')}</div><p class="small muted">Checkpoint-based validation. Full difficulty-adjustment validation is outside this POC.</p></aside></div></div>`);
+}
+S.find(s=>s.id==='prep').render=preparationView;
+S.find(s=>s.id==='prep2').render=()=>{const saved=preparationDemo.stage;preparationDemo.stage='done';const html=preparationView();preparationDemo.stage=saved;return html;};
+S.find(s=>s.id==='prep3').render=()=>page({rail:'prep',crumb:'OFFLINE / DEMO DATA',title:'A required header is missing.'},`<div class="verdict v-amber"><div class="ic">!</div><div><h2>Verification incomplete</h2><p>Required block 1,712,402 is not stored. The package remains available for retry.</p></div></div><section class="card"><h3>Continue when connected</h3><ol><li>Reconnect to the internet.</li><li>Sync the required headers.</li><li>Run verification again against the retained package.</li></ol><div class="actions">${demoLink('Prepare & sync','prep')}${demoLink('Review saved package','b4')}</div></section>`);
+S.find(s=>s.id==='hdr').render=()=>page({rail:'hdr',strip:{preparation:true},crumb:'HEADERS / DEMO DATA',title:'Your local snapshot.'},`<div class="cols"><section class="card"><h3>Stored block headers</h3>${demoFacts([['Snapshot',preparationDemo.stage==='done'?'s-7f4b':'s-7f3a'],['Headers through',preparationDemo.stage==='done'?'1,712,402':'1,712,388'],['Checkpoint','1,711,900 · pinned in app'],['Sources','Header source A / Header source B'],['Validation','Linkage and proof of work'],['Full DAA validation','Outside POC scope']])}<div class="actions">${demoLink('Prepare & sync','prep')}${demoLink('View sync log','log')}</div></section><aside class="callout">Keep the last usable snapshot if a sync fails or sources disagree. No external lookup should occur during offline verification.</aside></div>`);
+S.find(s=>s.id==='log').render=()=>page({rail:'prep',strip:{preparation:true},crumb:'APP ACTIVITY / DEMO DATA',title:'Network log.'},`<div class="callout">This panel records app-observed activity only. It cannot observe traffic made independently by a native wallet. Entries below are simulated.</div><section class="card"><h3>Preparation session</h3>${preparationDemo.activity.length?`<div class="prep-log"><table class="t"><thead><tr><th>Order</th><th>Destination</th><th>Purpose</th><th>Result</th></tr></thead><tbody>${preparationDemo.activity.map((entry,i)=>`<tr><td>${i+1}</td><td>${entry[0]}</td><td>${entry[1]}</td><td>${entry[2]}</td></tr>`).join('')}</tbody></table></div>`:'<p>No simulated requests yet. Preview preparation checks to see sync activity here.</p>'}<p class="small muted">Local verification requires zero external requests. No ticket bodies, credentials or private keys belong in this log.</p><div class="actions">${demoLink('Return to preparation','prep')}</div></section>`);
+
+// Scanner design simulation: no camera, parser, admission record or verifier runs.
+let scannerDemo={method:'qr',stage:'idle',scenario:'pass'};
+const scannerButton=(label,action)=>`<button class="btn" data-scanner="${action}">${label}</button>`;
+const scannerLimits=()=>`<div class="request-notice"><b>What this check cannot prove</b><p>Mined inclusion does not prove current unspentness, that the presenter controls the key, or that the ticket has not been used at another offline scanner.</p></div>`;
+const scannerSnapshot=()=>`<aside class="request-aside"><span class="home-eyebrow">OFFLINE SCANNER / SAMPLE SNAPSHOT</span><h3>Prepared earlier.<br>Checked here.</h3>${demoFacts([['Headers through',scannerDemo.scenario==='missing'?'1,712,388':'1,712,402'],['Trusted issuer','Pinned venue identity'],['External requests','0 during this check']])}<p>The latest presented transfer must have a mining proof that matches a stored header.</p>${scannerLimits()}<a href="#prep">Prepare this scanner ↗</a></aside>`;
+function scannerReceive(){
+ const {method,stage,scenario}=scannerDemo;
+ let content;
+ if(stage==='camera-error')content=`${verdict('amber','!','Camera unavailable','Permission was denied. Retry or import a ticket package file.')}<div class="actions">${scannerButton('Retry camera','qr')}${scannerButton('Use a file','file')}</div>`;
+ else if(stage==='file-error')content=`${verdict('amber','!','Not a ticket package','A receiving request was selected. Ask the holder for the ticket package. No verification has run.')}<div class="actions">${scannerButton('Choose another sample','reset')}</div>`;
+ else if(stage==='loading')content=`<div class="package-loader" role="status"><span class="home-eyebrow">RECEIVING / DEMO</span><h2>${method==='qr'?'Keep the code in view.':'Reading the package.'}</h2><progress value="68" max="100" aria-label="Sample receipt progress">68%</progress><p>68% received · evidence has not been checked.</p></div><div class="actions">${scannerButton('Preview completed receipt','complete')}${scannerButton('Cancel','reset')}</div>`;
+ else if(stage==='ready')content=`<div class="request-confirm"><span>↘</span><div><b>Package received · not verified</b><p>Harbour Nights · GA-0142 · sample package</p></div></div><p class="request-instruction">Check the venue signature, ticket continuity, transaction evidence and latest-transfer mining proof locally.</p><div class="actions">${scannerButton('Preview offline check ↗','verify')}${scannerButton('Choose another package','reset')}</div>`;
+ else content=`${method==='qr'?'<div class="camera"><div class="reticle"></div><div class="cap">Point at the holder’s ticket-package QR<br>Preview only · camera is not running</div></div>':'<div class="request-file"><span>↓</span><b>holder-ticket-package.json</b><small>SAMPLE FILE / NO DEVICE FILES ARE READ</small></div>'}<p class="request-instruction">${method==='qr'?'Receive all animated QR frames before verifying.':'Use the ticket package supplied by the holder, not a receiving-request file.'}</p><div class="actions">${scannerButton(method==='qr'?'Preview scan':'Select sample package','load')}${scannerButton(method==='qr'?'Preview camera denied':'Preview wrong file',method==='qr'?'camera-error':'file-error')}</div>`;
+ return page({rail:'door',strip:{scanner:true},crumb:'SCANNER / DEMO DATA',title:'Check the ticket.'},`<div class="receive-flow"><div class="home-intro"><p>The evidence arrives.<br>The check stays on this device.</p></div><div class="buyer-scenarios"><label>DEMO RESULT<select data-scanner-scenario>${[['pass','Latest transfer mined'],['unmined','Latest transfer unmined'],['missing','Required header missing'],['proof','Mining proof missing'],['tampered','Tampered ticket'],['issuer','Wrong venue signature']].map(([v,l])=>`<option value="${v}" ${scenario===v?'selected':''}>${l}</option>`).join('')}</select></label><span>Illustrative states. No real verification or admission occurs.</span></div><div class="request-layout"><section class="request-share"><div class="request-methods" role="group" aria-label="Receive ticket package"><button data-scanner="qr" aria-pressed="${method==='qr'}">Scan QR</button><button data-scanner="file" aria-pressed="${method==='file'}">Import file</button></div><div class="buyer-transport" aria-live="polite">${content}</div></section>${scannerSnapshot()}</div></div>`);
+}
+S.find(s=>s.id==='d0').render=scannerReceive;
+function scannerResult(id){
+ const scenario=id==='d1'?'pass':id==='d2'?'unmined':id==='d3'?(scannerDemo.scenario==='proof'?'proof':'missing'):(scannerDemo.scenario==='issuer'?'issuer':'tampered');
+ const definitions={
+ pass:['green','✓','Passes POC policy','The latest presented transfer is mined and the required evidence checks passed.'],
+ unmined:['amber','!','Online check required','The latest transfer is unmined. Valid mined ancestors do not confirm this transfer.'],
+ missing:['amber','?','Verification incomplete','Block header 1,712,402 is missing from the local snapshot.'],
+ proof:['amber','?','Verification incomplete','The package does not contain a mining proof for the latest transfer. Its confirmation cannot be established offline.'],
+ tampered:['red','×','Ticket rejected','Ticket data was altered and its integrity check failed.'],
+ issuer:['red','×','Ticket rejected','The issuer signature does not match the pinned venue key.']
+ };
+ const [tone,icon,title,reason]=definitions[scenario];
+ let rows=[['Venue signature','Passed — trusted issuer'],['Ticket continuity','Passed — links to issuance'],['Transaction evidence','Passed locally'],['Latest-transfer inclusion','Passed — block 1,712,402']];
+ if(scenario==='unmined')rows[3][1]='Not mined — online check required';
+ if(scenario==='missing')rows[3][1]='Incomplete — required header missing';
+ if(scenario==='proof')rows[3][1]='Incomplete — mining proof missing';
+ if(scenario==='tampered')rows=[['Package integrity','Failed — altered ticket data'],['Venue signature','Not evaluated'],['Ticket continuity','Not evaluated'],['Latest-transfer inclusion','Not evaluated']];
+ if(scenario==='issuer')rows=[['Venue signature','Failed — wrong signing key'],['Ticket continuity','Not evaluated'],['Transaction evidence','Not evaluated'],['Latest-transfer inclusion','Not evaluated']];
+ const recovery=scenario==='missing'?'Keep the package, reconnect to sync the required header, then retry.':scenario==='proof'?'Ask the holder for an updated package with the latest-transfer mining proof, or perform an online check.':scenario==='unmined'?'Hold the offline admission decision. Reconnect to check the transfer status; retry when mining evidence is available.':scenario==='pass'?'This sample meets the POC’s mined-transfer rule. This preview does not record admission.':'Do not accept this package. Ask the holder for a valid ticket package.';
+ return page({rail:'door',strip:{scanner:true,scannerHeight:scenario==='missing'?'1,712,388':'1,712,402'},crumb:'SCANNER RESULT / DEMO DATA',title},`<div class="receive-flow">${verdict(tone,icon,title,reason)}<div class="request-layout"><section class="card"><span class="home-eyebrow">PRESENTED TICKET / SAMPLE</span><h3 class="prep-title">Harbour Nights.</h3>${demoFacts([['Ticket','GA-0142'],['Latest transfer','e91b…07'],['External requests','0 during local verification']])}<p>${recovery}</p><div class="actions">${scannerButton('Scan next ticket ↗','next')}${scenario==='missing'?demoLink('Prepare & sync','prep'):''}${['unmined','proof'].includes(scenario)?demoLink('Review preparation','prep'):''}</div><p class="small muted">All values are sample data. No live admission decision was made.</p></section><section class="card"><h3>Evidence results</h3><ul class="checks">${rows.map(([name,value])=>`<li><span class="st ${value.startsWith('Passed')?'pass':value.startsWith('Failed')?'fail':'inc'}">${value.startsWith('Passed')?'✓':value.startsWith('Failed')?'×':'—'}</span><div class="nm">${name}</div><div class="rs">${value}</div></li>`).join('')}</ul>${scannerLimits()}</section></div></div>`);
+}
+['d1','d2','d3','d4'].forEach(id=>S.find(s=>s.id===id).render=()=>scannerResult(id));
+
+// Venue issuance simulation. The pinned identity is preconfigured, never registered here.
+let venueDemo={wallet:'disconnected',stage:'details',event:'Harbour Nights',ticket:'GA-0142',recipient:'R-4F2A',signing:'waiting',broadcast:'not-submitted',mining:'pending'};
+const venueEscape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const venueButton=(label,action,disabled=false)=>`<button class="btn" data-venue="${action}" ${disabled?'disabled':''}>${label}</button>`;
+const venueSteps=step=>`<ol class="receive-steps">${['Identity & details','Review & sign','Broadcast & evidence'].map((label,i)=>`<li ${i===step?'aria-current="step"':''}><span>0${i+1}</span>${label}</li>`).join('')}</ol>`;
+const venueIdentity=()=>`<aside class="request-aside"><span class="home-eyebrow">PRECONFIGURED VENUE / SAMPLE IDENTITY</span><h3>The venue’s signature.<br>The ticket’s origin.</h3>${demoFacts([['Venue','Harbour Hall'],['Trusted identity','03a1c8…9f2c · fingerprint'],['Connected wallet',venueDemo.wallet==='matched'?'Matches trusted venue':venueDemo.wallet==='wrong'?'Different identity':'Not connected'],['Ticket format','PushDrop token']])}<div class="request-notice"><b>Two separate checks</b><p>The venue’s identity signature establishes issuer authenticity. SPV checks transaction evidence and mined inclusion separately.</p></div><p class="small muted">The private identity key stays in the wallet. This preview does not connect a wallet, mint a token or produce a signature.</p></aside>`;
+function venueIssue(){
+ const matched=venueDemo.wallet==='matched',review=venueDemo.stage==='review';
+ return page({rail:'venue',strip:{online:true},crumb:'VENUE / DEMO DATA',title:review?'Review the issuance.':'Issue a ticket.'},`<div class="receive-flow">${venueSteps(review?1:0)}<div class="request-layout"><section class="request-share">${review?`<span class="home-eyebrow">READY FOR WALLET AUTHORIZATION</span><h3 class="prep-title">${venueEscape(venueDemo.event)}</h3>${demoFacts([['Ticket ID',venueEscape(venueDemo.ticket)],['Admission','General admission'],['Initial recipient','Request R-4F2A · 02b7 9c1e … e41d'],['Issuer','Harbour Hall · pinned identity'],['Format','PushDrop token']])}<p class="request-instruction">Authorize the venue’s wallet to sign the ticket issuance with its identity key. Broadcasting and mining follow as separate steps.</p><div class="actions">${venueButton('Preview wallet authorization ↗','authorize',!matched)}${venueButton('Edit details','edit')}</div>`:`<span class="home-eyebrow">01 / CHECK THE ISSUER</span><h3 class="prep-title">${matched?'Venue wallet matches.':'Connect the venue wallet.'}</h3><p class="request-instruction">Use the wallet for the preconfigured venue identity. A different wallet cannot issue tickets as this venue.</p>${venueDemo.wallet==='wrong'?'<div class="callout" role="alert">Wrong wallet identity. Expected 03a1c8…9f2c; received 027d6b…ab12. Issuance is blocked.</div>':''}<div class="actions">${venueButton(matched?'Reconnect matching wallet':'Preview matching wallet','connect')}${venueButton('Preview wrong identity','wrong-wallet')}</div><form data-venue-form class="venue-form"><fieldset ${matched?'':'disabled'}><legend>02 / TICKET DETAILS</legend><label>Event name<input name="event" value="${venueEscape(venueDemo.event)}" required maxlength="80" autocomplete="off"></label><label>Ticket identifier<input name="ticket" value="${venueEscape(venueDemo.ticket)}" required maxlength="40" autocomplete="off"></label><label>Initial recipient<select name="recipient"><option value="R-4F2A">Saved request R-4F2A · sample recipient</option></select></label><p class="small muted">Recipient fingerprint: 02b7 9c1e … e41d. This sample request supplies the initial locking key.</p><button type="submit" class="btn primary">Review ticket ↗</button></fieldset></form>`}</section>${venueIdentity()}</div></div>`);
+}
+S.find(s=>s.id==='v1').render=venueIssue;
+S.find(s=>s.id==='v2').render=()=>page({rail:'venue',strip:{online:true},crumb:'VENUE / DEMO DATA',title:venueDemo.signing==='cancelled'?'Issuance cancelled.':'Authorize the issuance.'},`<div class="receive-flow">${venueSteps(1)}<div class="request-layout"><section class="request-start"><span class="home-eyebrow">WALLET AUTHORIZATION / SIMULATED</span><h2>${venueDemo.signing==='cancelled'?'Nothing was signed.':'Sign with the<br><em>venue identity.</em>'}</h2><p>${venueDemo.signing==='cancelled'?'The wallet request was declined. No token or signed transaction was produced. Your draft details are retained.':'Review the event, ticket identifier and initial recipient in the venue wallet. The identity signature authenticates the venue as issuer.'}</p>${demoFacts([['Event',venueEscape(venueDemo.event)],['Ticket',venueEscape(venueDemo.ticket)],['Recipient','R-4F2A'],['Broadcast','Not submitted']])}<div class="actions">${venueDemo.signing==='cancelled'?venueButton('Retry authorization','retry-sign')+venueButton('Edit draft','edit'):venueButton('Preview approved signature','signed')+venueButton('Preview cancellation','cancel-sign')}</div><p class="small muted">No private key, signature or PushDrop token is created by this preview.</p></section>${venueIdentity()}</div></div>`);
+function venueResult(){
+ const {broadcast,mining}=venueDemo,failed=broadcast==='failed',submitted=broadcast==='submitted',mined=mining==='mined';
+ return page({rail:'venue',strip:{online:true},crumb:'VENUE / DEMO DATA',title:mined?'Ticket issued.':'Issuance status.'},`<div class="receive-flow">${venueSteps(2)}<div class="verdict ${mined?'v-green':failed?'v-amber':'v-blue'}"><div class="ic">${mined?'✓':failed?'!':'↗'}</div><div><h2>${mined?'Mined — proof checked':failed?'Broadcast failed — retry available':submitted?'Submitted — waiting for mining':'Signed — not yet broadcast'}</h2><p>${venueEscape(venueDemo.event)} · ${venueEscape(venueDemo.ticket)} · sample issuance</p></div></div><div class="request-layout"><section class="card"><h3>Independent issuance states</h3>${demoFacts([['Venue identity signature','Created · matches pinned venue · sample'],['PushDrop transaction','Signed · sample'],['Broadcast',failed?'Network request failed':submitted?'Accepted for processing':'Not submitted'],['Mining',mined?'Included at block 1,712,402':'No mining proof yet'],['Initial recipient','02b7 9c1e … e41d']])}<div class="actions">${!submitted?venueButton(failed?'Preview retry broadcast':'Preview successful broadcast','broadcast')+(!failed?venueButton('Preview broadcast failure','broadcast-fail'):''):!mined?venueButton('Preview mined proof','mined'):''}</div><p class="small muted">A broadcast response is not mining confirmation. Retry uses the same signed transaction; it does not mint a second ticket.</p></section><aside class="request-aside"><span class="home-eyebrow">TICKET EVIDENCE / DEMO</span><h3>${mined?'Its origin. Its proof.':'Keep each state visible.'}</h3>${demoFacts([['Venue','Harbour Hall'],['Ticket format','PushDrop'],['Issuer authenticity','Identity signature'],['SPV anchor',mined?'Merkle proof → stored header 1,712,402':'Awaiting mined inclusion evidence']])}<p>Mining does not prove that the ticket is currently unspent. Confirmation timing is not guaranteed.</p><div class="actions">${venueButton('Issue another ticket','new')}${demoLink('Review headers','hdr')}</div><p class="small muted">All results are illustrative. No wallet, ARC or blockchain operation has occurred.</p></aside></div></div>`);
+}
+S.find(s=>s.id==='v3').render=venueResult;
+
+// Controlled double-sell example: fixtures never construct or submit a conflicting spend.
+let doubleSellDemo={verified:false,submittedA:false,submittedB:false,winner:'A',resolved:false,scanner:false};
+const doubleButton=(label,action,disabled=false)=>`<button class="btn" data-double="${action}" ${disabled?'disabled':''}>${label}</button>`;
+function doubleBuyer(id,online=false){
+ const submitted=doubleSellDemo['submitted'+id],resolved=online&&doubleSellDemo.resolved,won=resolved&&doubleSellDemo.winner===id;
+ const status=!online?(doubleSellDemo.verified?'Verified offline — pending broadcast':'Package received — not verified'):resolved?(won?'Mined — proof verified':'Conflict reported — not confirmed'):submitted?'Submitted — awaiting outcome':'Pending broadcast';
+ return `<article class="double-buyer"><div class="ticket-top"><span>BUYER ${id}</span><span>DEMO / GA-0142</span></div><h2>Harbour<br><em>Nights.</em></h2><div class="double-state ${resolved?(won?'success':'conflict'):''}"><b>${status}</b></div>${demoFacts([['Recipient request',id==='A'?'R-4F2A':'R-8C19'],['Transfer ID',id==='A'?'e91b…07':'a63c…92'],['Spent ticket output','7c42…b9:0 · same for both'],['Local verification',doubleSellDemo.verified||online?'Passed in this example':'Not run'],['Broadcast',online?(submitted?'Submitted':'Not submitted'):'Not submitted'],['Mining',resolved?(won?'Included at 1,712,402':'No inclusion proof'):'No inclusion proof']])}${online&&!resolved?`<div class="actions">${doubleButton(submitted?'Submitted':`Preview Buyer ${id} broadcast`,'submit-'+id,submitted)}</div>`:''}<p class="small muted">${resolved&&!won?'Conflict evidence comes from the online response. It was not available during the offline check.':'The package is locked to this buyer’s key. The other buyer’s package is not visible to their device.'}</p></article>`;
+}
+S.find(s=>s.id==='x1').render=()=>page({rail:'home',crumb:'DEMONSTRATION / DOUBLE-SELL',title:'One ticket. Two buyers.'},`<div class="receive-flow"><div class="home-intro"><p>Two valid-looking handoffs.<br>One shared input.</p></div><div class="callout">Controlled demo only. The seller creates two conflicting transfers of the same ticket output, each locked to a different buyer. No real transactions are created here.</div><div class="double-grid">${doubleBuyer('A')}${doubleBuyer('B')}</div><section class="request-notice" aria-live="polite"><b>${doubleSellDemo.verified?'Both local checks can pass.':'What can each buyer see?'}</b><p>${doubleSellDemo.verified?'Each package has valid issuer, lineage, transaction and recipient evidence. Neither offline device can rule out the competing spend. The accepted states below are simulated; no tickets are persisted.':'Their own package, its ancestors and their stored headers. They cannot discover the other buyer’s competing transfer while offline.'}</p></section><div class="actions">${doubleButton(doubleSellDemo.verified?'Offline checks previewed':'Preview both offline checks & acceptance','verify',doubleSellDemo.verified)}${doubleButton('Next: reconnect both buyers ↗','online',!doubleSellDemo.verified)}${doubleButton('Restart demonstration','restart')}</div></div>`);
+S.find(s=>s.id==='x2').render=()=>page({rail:'home',strip:{online:true},crumb:'DEMONSTRATION / AFTER RECONNECTING',title:'Only one can confirm.'},`<div class="receive-flow"><div class="buyer-scenarios"><label>SIMULATED CONFIRMED TRANSFER<select data-double-winner ${doubleSellDemo.resolved?'disabled':''}><option value="A" ${doubleSellDemo.winner==='A'?'selected':''}>Buyer A</option><option value="B" ${doubleSellDemo.winner==='B'?'selected':''}>Buyer B</option></select></label><span>The selected outcome is a fixture. Broadcast order does not guarantee which transfer confirms.</span></div><div class="double-grid">${doubleBuyer('A',true)}${doubleBuyer('B',true)}</div><section class="request-notice" aria-live="polite"><b>${doubleSellDemo.resolved?'Conflicting spends cannot both confirm on the same chain.':'Submission is not confirmation.'}</b><p>${doubleSellDemo.resolved?'The winning transfer has a mined inclusion proof. The other receives a conflict response in this scenario. A timeout or generic network error alone would not establish a conflict.':'Preview each buyer submitting their signed package, then reveal the selected mined/conflict outcome. The app must wait for actual responses in the working POC.'}</p></section><div class="actions">${doubleButton('Preview mining & conflict evidence','resolve',doubleSellDemo.resolved||!doubleSellDemo.submittedA||!doubleSellDemo.submittedB)}${doubleButton('Show Scanner decisions','scanner',!doubleSellDemo.resolved)}${doubleButton('Restart demonstration','restart')}</div>${doubleSellDemo.scanner?`<section class="double-scanner"><span class="home-eyebrow">SCANNER / PREPARED HEADERS AND UPDATED PACKAGES</span><h2>What can the entrance check?</h2><div class="double-grid"><div class="card"><span class="badge b-green">Buyer ${doubleSellDemo.winner} · passes POC policy</span><h3>Mined transfer presented.</h3><p>The holder supplies the updated mining proof. The scanner has the corresponding header and verifies the latest transfer locally.</p></div><div class="card"><span class="badge b-amber">Buyer ${doubleSellDemo.winner==='A'?'B':'A'} · online check required</span><h3>No mined latest transfer.</h3><p>The offline scanner cannot infer the competing spend. It flags this package for an online check; the demonstrated online conflict evidence supports rejection.</p></div></div><p class="small muted">A mined inclusion proof still does not prove current unspentness or prevent repeated entry. No real admission is recorded.</p></section>`:''}</div>`);
+
+let proofSizeDemo={stage:'before',metric:'package'};
+function proofSizeView(){
+ const after=proofSizeDemo.stage==='after',metric=proofSizeDemo.metric;
+ const beforeBytes=PROOF_SIZE_DEMO.before[metric],afterBytes=PROOF_SIZE_DEMO.after[metric],saved=beforeBytes-afterBytes;
+ const bytes=n=>n.toLocaleString('en-US')+' B';
+ const retained=[['Venue signature','Keep the issuer’s signature and the trusted-key reference needed to check authenticity.'],['Issuance evidence','Keep the original ticket identity and issuance reference required by the ticket format.'],['Transfer continuity','Keep the ticket lineage needed to link the current transfer to the issued ticket.'],['Current transfer','Keep its transaction and recipient-locking evidence.'],['Mining evidence','Use the relevant Merkle proof and a separately stored validated block header.']];
+ return page({rail:'home',crumb:'PROOF SIZE / DEMO DATA',title:'Less history to carry.'},`<div class="receive-flow"><div class="home-intro"><p>The proof changes.<br>The ticket’s identity stays.</p></div><div class="buyer-scenarios"><span>ILLUSTRATIVE BYTE COUNTS / NOT LIVE MEASUREMENTS</span><div class="request-methods" role="group" aria-label="Transfer stage"><button data-proof-stage="before" aria-pressed="${!after}">Before mining</button><button data-proof-stage="after" aria-pressed="${after}">After mining</button></div></div><div class="request-layout"><section class="proof-package"><span class="home-eyebrow">HARBOUR NIGHTS / GA-0142 / SAMPLE</span><h2>${after?'Anchored in<br><em>a block.</em>':'Carrying its<br><em>ancestry.</em>'}</h2><span class="badge ${after?'b-green':'b-amber'}">${after?'Latest transfer mined · example':'Latest transfer unmined · example'}</span><ol class="proof-layers"><li><span>01</span><div><b>Current transfer</b><small>Transaction and buyer’s locking output</small></div></li><li class="proof-changing"><span>02</span><div><b>${after?'Merkle inclusion proof':'Required transaction ancestry'}</b><small>${after?'Relevant BUMP anchors the mined transaction to a stored block header.':'Required ancestors connect the unmined transfer to mined anchors.'}</small></div></li><li><span>03</span><div><b>Ticket authenticity & continuity</b><small>Retained independently of SPV ancestry pruning</small></div></li></ol><p class="small muted">${after?'Once the mining proof is verified, ancestry no longer required for SPV can be omitted. Keep any evidence still needed by the ticket rules.':'Before mining, the package must provide the transaction evidence required to verify the unmined chain.'}</p></section><section class="request-aside"><span class="home-eyebrow">BEFORE / AFTER</span><h3>Measure both sizes.</h3><div class="request-methods" role="group" aria-label="Size measurement"><button data-proof-metric="package" aria-pressed="${metric==='package'}">Total package</button><button data-proof-metric="beef" aria-pressed="${metric==='beef'}">Atomic BEEF</button></div><div class="proof-measure" aria-live="polite"><div class="proof-bar-label"><b>Before mining</b><span>${bytes(beforeBytes)}</span></div><div class="proof-bar"><i style="width:100%"></i></div><div class="proof-bar-label"><b>After mining</b><span>${bytes(afterBytes)}</span></div><div class="proof-bar after"><i style="width:${afterBytes/beforeBytes*100}%"></i></div><p><strong>${(saved/beforeBytes*100).toFixed(1)}%</strong> smaller in this example<br><span>${bytes(saved)} fewer bytes</span></p></div><p class="small muted">Total package includes Atomic BEEF plus the ticket envelope and retained ticket evidence. Block headers are stored separately on the device.</p></section></div><section class="card proof-size-table"><h3>The complete comparison</h3><table class="t"><thead><tr><th>Measurement</th><th>Before mining</th><th>After mining</th></tr></thead><tbody><tr><td>Atomic BEEF</td><td>${bytes(PROOF_SIZE_DEMO.before.beef)}</td><td>${bytes(PROOF_SIZE_DEMO.after.beef)}</td></tr><tr><td>Total package</td><td>${bytes(PROOF_SIZE_DEMO.before.package)}</td><td>${bytes(PROOF_SIZE_DEMO.after.package)}</td></tr></tbody></table><p class="small muted">These are design fixtures. The working app must measure the actual serialized bytes before and after pruning. A smaller total package is not guaranteed for every transfer.</p></section><section class="landing-evidence proof-retained"><span class="home-eyebrow">WHAT MUST STILL BE AVAILABLE</span><h2>Smaller doesn’t mean<br><em>less evidence of authenticity.</em></h2><div class="evidence-folds">${retained.map(([name,text],i)=>`<details><summary><span>0${i+1}</span>${name}<i aria-hidden="true">+</i></summary><div><p>${text}</p></div></details>`).join('')}</div></section><div class="request-notice"><b>Prune, then verify again.</b><p>The reduced package must still pass the issuer, continuity, transaction and recipient checks, with SPV anchors checked against stored headers. Mined inclusion does not prove current unspentness.</p><p class="small muted">This screen does not prune a real package or run verification.</p></div><div class="actions">${demoLink('Review accepted ticket','b6')}${demoLink('Double-sell demonstration','x1')}${demoLink('My tickets','home')}</div></div>`);
+}
+S.find(s=>s.id==='z1').render=proofSizeView;
+
+S.find(s=>s.id==='f1').render=()=>page({rail:'home',crumb:'DEMONSTRATION / REJECTED FAKES',title:'Show why it failed.'},`<div class="cols"><section class="card"><h3>Tampered ticket</h3><p>Altered ticket data fails the integrity check. The scanner does not proceed as if the remaining evidence passed.</p><button class="btn" data-fake="tampered">Preview tampered-ticket rejection</button></section><section class="card"><h3>Wrong venue signature</h3><p>A valid signature from a different key does not authenticate the trusted venue.</p><button class="btn" data-fake="issuer">Preview wrong-issuer rejection</button></section></div><p class="small muted">Controlled examples only. No real verifier is running.</p>`);
+
+/* ================= canvas ================= */
+const idx = document.getElementById('index');
+let html = '<h1>Counterfoil.</h1><p>DESIGN REVIEW<br>Ticket handoff, with evidence.<br><br>Screen index — not app navigation.<br>All values are illustrative.<br>No wallet connected.</p><div class="review-entries"><a href="#/">Landing page ↗</a><a href="#/tickets">Ticket holder ↗</a><a href="#/venue">Venue ↗</a><a href="#/scanner">Scanner ↗</a></div>';
+let g = '';
+S.forEach((s,i)=>{ if (s.group!==g){ g=s.group; html += `<h2>${g}</h2>`; } html += `<a href="#${s.id}" data-i="${i}">${s.name}</a>`; });
+idx.innerHTML = html;
+function show(id){
+  const aliases={'p1':'prep','h1':'hdr','n1':'log','/':'landing','/tickets':collectionHasDemoTickets?'home':'home-empty','/venue':'v1','/scanner':'d0'};
+  id=aliases[id]||id||'landing';
+  if(id==='home'||id==='b6')collectionHasDemoTickets=true;
+  if(id==='home-empty')collectionHasDemoTickets=false;
+  if(id.startsWith('v')) workspace='venue';
+  else if(id.startsWith('d')) workspace='scanner';
+  else if(['landing','home','home-empty','f1','x1','x2','z1'].includes(id)||/^b\d|^s\d/.test(id)) workspace='holder';
+  const s = S.find(x=>x.id===id) || S[0];
+  document.getElementById('lp').innerHTML = s.render();
+  document.getElementById('ph').innerHTML = s.render();
+  document.getElementById('stitle').textContent = s.name;
+  document.getElementById('snote').textContent = s.note;
+  idx.querySelectorAll('a').forEach(a=>a.classList.toggle('on', a.getAttribute('href')==='#'+s.id));
+  decorate(s.id);
+  document.querySelectorAll('.landing').forEach(el=>el.classList.toggle('motion-paused',window.matchMedia('(prefers-reduced-motion: reduce)').matches));
+  document.querySelectorAll('.screen').forEach(e=>e.scrollTop=0);
+}
+window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
+show(location.hash.slice(1) || 'landing');
+document.getElementById('viewseg').addEventListener('click',e=>{
+  const v=e.target.dataset.v; if(!v) return;
+  document.querySelectorAll('#viewseg button').forEach(b=>b.classList.toggle('on',b===e.target));
+  document.getElementById('frames').className = v==='both'?'':'only-'+v;
+});
+
+function decorate(id){
+ document.querySelectorAll('.screen').forEach(screen=>{
+  if(id==='home-empty'){
+   const transfer=screen.querySelector('.rail a[href="#s1"]');
+   if(transfer){transfer.removeAttribute('href');transfer.setAttribute('aria-disabled','true');transfer.title='Receive a ticket before transferring one';}
+  }
+  screen.querySelectorAll('.role').forEach((el,i)=>{el.tabIndex=0;el.setAttribute('role','link'); const route=['v1','s1','b1','d0','f1','p1'][i];el.onclick=()=>location.hash=route;el.onkeydown=e=>{if(e.key==='Enter') location.hash=route;};});
+  screen.querySelectorAll('.strip .sub').forEach(el=>{el.style.cursor='pointer';el.onclick=()=>location.hash='n1';});
+ });
+}
+function toast(message){document.querySelector('.prototype-toast')?.remove();const n=document.createElement('div');n.className='prototype-toast';n.setAttribute('role','status');n.textContent=message;document.body.append(n);setTimeout(()=>n.remove(),4000);}
+document.addEventListener('change',e=>{if(e.target.matches('[data-buyer-outcome]'))buyerDemo.outcome=e.target.value;});
+document.addEventListener('change',e=>{
+ if(e.target.matches('[data-seller-request]')){sellerDemo.request=e.target.value;sellerDemo.importState='idle';show('s2');}
+ if(e.target.matches('[data-seller-confirm]')){sellerDemo.confirmed=e.target.checked;document.querySelectorAll('[data-seller="authorize"]').forEach(b=>b.disabled=!sellerDemo.confirmed);}
+});
+document.addEventListener('change',e=>{if(e.target.matches('[data-preparation-scenario]')){preparationDemo.scenario=e.target.value;preparationDemo.stage='idle';show('prep');}});
+document.addEventListener('change',e=>{if(e.target.matches('[data-scanner-scenario]')){scannerDemo.scenario=e.target.value;scannerDemo.stage='idle';show('d0');}});
+document.addEventListener('submit',e=>{
+ if(!e.target.matches('[data-venue-form]'))return;e.preventDefault();if(venueDemo.wallet!=='matched')return;
+ const form=e.target;
+ for(const name of ['event','ticket']){const input=form.elements.namedItem(name);input.setCustomValidity(input.value.trim()?'':'Enter a value.');if(!input.checkValidity()){input.reportValidity();return;}}
+ venueDemo.event=form.elements.namedItem('event').value.trim();venueDemo.ticket=form.elements.namedItem('ticket').value.trim();venueDemo.recipient=form.elements.namedItem('recipient').value;venueDemo.stage='review';show('v1');
+});
+document.addEventListener('input',e=>{if(e.target.closest('[data-venue-form]')&&e.target.setCustomValidity)e.target.setCustomValidity('');});
+document.addEventListener('change',e=>{if(e.target.matches('[data-double-winner]')&&!doubleSellDemo.resolved){doubleSellDemo.winner=e.target.value;}});
+document.addEventListener('click',e=>{
+ const fake=e.target.closest('[data-fake]');if(fake){scannerDemo.scenario=fake.dataset.fake;location.hash='d4';return;}
+
+ const proofControl=e.target.closest('[data-proof-stage],[data-proof-metric]');
+ if(proofControl){if(proofControl.dataset.proofStage)proofSizeDemo.stage=proofControl.dataset.proofStage;if(proofControl.dataset.proofMetric)proofSizeDemo.metric=proofControl.dataset.proofMetric;const position=[...document.querySelectorAll('.screen')].map(el=>el.scrollTop);show('z1');document.querySelectorAll('.screen').forEach((el,i)=>el.scrollTop=position[i]);const selector=proofControl.hasAttribute('data-proof-stage')?'[data-proof-stage="'+proofSizeDemo.stage+'"]':'[data-proof-metric="'+proofSizeDemo.metric+'"]';document.querySelectorAll(selector).forEach(el=>{if(el.offsetWidth)el.focus({preventScroll:true});});return;}
+
+ const doubleControl=e.target.closest('[data-double]');
+ if(doubleControl){
+  if(doubleControl.disabled)return;const action=doubleControl.dataset.double;
+  const go=id=>{if(location.hash==='#'+id)show(id);else location.hash=id;};
+  if(action==='restart'){doubleSellDemo={verified:false,submittedA:false,submittedB:false,winner:'A',resolved:false,scanner:false};go('x1');return;}
+  if(action==='verify'){doubleSellDemo.verified=true;show('x1');return;}
+  if(action==='online'){if(doubleSellDemo.verified)go('x2');return;}
+  if(action==='submit-A'||action==='submit-B'){doubleSellDemo['submitted'+action.slice(-1)]=true;show('x2');return;}
+  if(action==='resolve'){if(doubleSellDemo.submittedA&&doubleSellDemo.submittedB){doubleSellDemo.resolved=true;show('x2');}return;}
+  if(action==='scanner'){if(doubleSellDemo.resolved){doubleSellDemo.scanner=true;show('x2');document.querySelectorAll('.double-scanner').forEach(el=>{if(el.offsetWidth)el.scrollIntoView({block:'start'});});}return;}
+ }
+
+ const venueControl=e.target.closest('[data-venue]');
+ if(venueControl){
+  if(venueControl.disabled)return;const action=venueControl.dataset.venue;
+  const go=id=>{if(location.hash==='#'+id)show(id);else location.hash=id;};
+  if(action==='connect'||action==='wrong-wallet'){const form=venueControl.closest('.request-share').querySelector('form');if(form){venueDemo.event=form.elements.namedItem('event').value;venueDemo.ticket=form.elements.namedItem('ticket').value;}venueDemo.wallet=action==='connect'?'matched':'wrong';venueDemo.stage='details';show('v1');return;}
+  if(action==='edit'){venueDemo.stage='details';go('v1');return;}
+  if(action==='authorize'||action==='retry-sign'){if(venueDemo.wallet!=='matched')return;venueDemo.signing='waiting';go('v2');return;}
+  if(action==='cancel-sign'){venueDemo.signing='cancelled';show('v2');return;}
+  if(action==='signed'){if(venueDemo.wallet!=='matched')return;venueDemo.broadcast='not-submitted';venueDemo.mining='pending';go('v3');return;}
+  if(action==='broadcast'||action==='broadcast-fail'){venueDemo.broadcast=action==='broadcast'?'submitted':'failed';show('v3');return;}
+  if(action==='mined'){if(venueDemo.broadcast==='submitted'){venueDemo.mining='mined';show('v3');}return;}
+  if(action==='new'){venueDemo={wallet:venueDemo.wallet,stage:'details',event:venueDemo.event,ticket:'',recipient:'R-4F2A',signing:'waiting',broadcast:'not-submitted',mining:'pending'};go('v1');return;}
+ }
+
+ const scannerControl=e.target.closest('[data-scanner]');
+ if(scannerControl){
+  const action=scannerControl.dataset.scanner;
+  if(action==='verify'){location.hash=scannerDemo.scenario==='pass'?'d1':scannerDemo.scenario==='unmined'?'d2':['missing','proof'].includes(scannerDemo.scenario)?'d3':'d4';return;}
+  if(action==='next'){scannerDemo={method:'qr',stage:'idle',scenario:'pass'};location.hash='d0';return;}
+  if(action==='qr'||action==='file'){scannerDemo.method=action;scannerDemo.stage='idle';}
+  else scannerDemo.stage=action==='load'?'loading':action==='complete'?'ready':action==='reset'?'idle':action;
+  show('d0');return;
+ }
+
+ const preparationButton=e.target.closest('[data-preparation]');
+ if(preparationButton){
+  const action=preparationButton.dataset.preparation;
+  if(action==='start'){
+   if(preparationDemo.scenario==='offline'){preparationDemo.stage='error';}
+   else if(preparationDemo.scenario==='wallet'){preparationDemo.activity.push(['Local wallet bridge','Access check','Unavailable']);preparationDemo.stage='error';}
+   else {preparationDemo.activity.push(['Header source A','Header sync','Pending'],['Header source B','Cross-check','Pending']);preparationDemo.stage='syncing';}
+  }else if(action==='finish'){
+   const result=preparationDemo.scenario==='conflict'?'Source disagreement':preparationDemo.scenario==='missing'?'Required header unavailable':'Validated';
+   preparationDemo.activity.slice(-2).forEach(entry=>entry[2]=result);
+   preparationDemo.stage=preparationDemo.scenario==='ready'?'done':'error';
+  }else if(action==='cancel'){preparationDemo.activity.slice(-2).forEach(entry=>entry[2]='Cancelled');preparationDemo.stage='idle';}
+  show('prep');return;
+ }
+
+ const sellerControl=e.target.closest('[data-seller]');
+ if(sellerControl){
+  const action=sellerControl.dataset.seller;if(sellerControl.disabled)return;
+  const go=id=>{if(location.hash==='#'+id)show(id);else location.hash=id;};
+  if(action==='check'){sellerDemo.checked=true;show('s1');return;}
+  if(action==='request'){if(sellerDemo.checked){sellerDemo.importState='idle';go('s2');}return;}
+  if(['qr','file','reset-import','camera-error'].includes(action)){sellerDemo.confirmed=false;sellerDemo.importState=action==='camera-error'?'camera-error':'idle';if(action==='qr'||action==='file')sellerDemo.method=action;go('s2');return;}
+  if(action==='import'){sellerDemo.confirmed=false;if(sellerDemo.request==='valid')go('s3');else{sellerDemo.importState='error';show('s2');}return;}
+  if(action==='authorize'){if(sellerDemo.confirmed){sellerDemo.wallet='waiting';go('s4');}return;}
+  if(action==='recipient'){go('s3');return;}
+  if(['cancel-wallet','fail-wallet','retry-wallet'].includes(action)){sellerDemo.wallet=action==='cancel-wallet'?'cancelled':action==='fail-wallet'?'failed':'waiting';show('s4');return;}
+  if(action==='signed'){sellerDemo.share='qr';go('s5');return;}
+  if(action==='share-qr'||action==='share-file'){sellerDemo.share=action==='share-qr'?'qr':'file';show(location.hash.slice(1)==='s5f'?'s5f':'s5');return;}
+  if(action==='download'){const data={designPreview:true,validTransaction:false,note:'Illustrative package only. No signed transaction or cryptographic proof.',ticket:'GA-0142',request:'R-4F2A'};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='ticket-package-demo.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return;}
+ }
+
+ const buyerButton=e.target.closest('[data-buyer]');
+ if(buyerButton){
+  const action=buyerButton.dataset.buyer;
+  if(action==='accept'){location.hash='b6';return;}
+  if(action==='decline'){const root=buyerButton.closest('.card');root.querySelector('[data-buyer-notice]').textContent='Package declined in this preview. No ticket was accepted.';root.querySelector('[data-buyer="accept"]').disabled=true;buyerButton.disabled=true;return;}
+  if(action==='retry'){buyerDemo.outcome='pass';location.hash='b3';return;}
+  if(action==='verify'){location.hash=buyerDemo.outcome==='pass'?'b3':buyerDemo.outcome==='missing'?'b4':'b5';return;}
+  if(action==='qr'||action==='file'){buyerDemo.method=action;buyerDemo.stage='idle';}
+  else buyerDemo.stage=action==='load'?'loading':action==='complete'?'ready':action==='reset'?'idle':action;
+  show('b2');
+  document.querySelectorAll('.screen').forEach(screen=>{const target=screen.querySelector('.buyer-transport button');if(target&&screen.clientWidth)target.focus({preventScroll:true});});
+  return;
+ }
+
+ const create=e.target.closest('[data-request-create]');
+ if(create){const root=create.closest('.receive-flow');root.querySelector('.request-start').hidden=true;root.querySelector('.request-ready').hidden=false;root.querySelector('[data-request-method]').focus();return;}
+ const method=e.target.closest('[data-request-method]');
+ if(method){const root=method.closest('.request-share');root.querySelectorAll('[data-request-method]').forEach(b=>b.setAttribute('aria-pressed',String(b===method)));root.querySelectorAll('[data-request-panel]').forEach(p=>p.hidden=p.dataset.requestPanel!==method.dataset.requestMethod);return;}
+ if(e.target.closest('[data-request-download]')){const data={designPreview:true,validWalletRequest:false,displayRequestId:'R-4F2A',note:'Illustrative artifact only. No receiving key or signature.'};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='receiving-request-demo.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return;}
+
+ const journeyButton=e.target.closest('[data-journey], [data-journey-next]');
+ if(journeyButton){
+  const root=journeyButton.closest('.journey');
+  const step=journeyButton.hasAttribute('data-journey')?Number(journeyButton.dataset.journey):(Number(root.dataset.step)+1)%3;
+  const scenes=[
+   ['SELLER / PREPARED OFFLINE','Make the transfer for this buyer.','The buyer shares a receiving request. The seller checks the ticket’s evidence locally, then uses their wallet to sign a transfer to the buyer’s key. The package goes back by QR or file.','Both devices were prepared online before the handoff.','Next: Buyer →'],
+   ['BUYER / VERIFIED OFFLINE — PENDING BROADCAST','Check the evidence. Save the package.','The buyer checks the venue signature, transfer history, block proofs and that the output is locked to their key. Accept saves the package locally, ready to reopen.','This cannot rule out a double-sale. Reconnect to broadcast; mining is a separate step.','Next: Scanner →'],
+   ['SCANNER / LATER, AFTER MINING & PREPARATION','Check the latest transfer at the entrance.','For this scene, the transfer has been broadcast and mined, and the package and scanner headers have been updated. The offline scanner checks the issuer, ticket history and latest-transfer inclusion proof.','Unmined or missing evidence needs an online check. Mined inclusion alone does not prove current unspentness or prevent repeated entry.','Replay: Seller ↺']
+  ];
+  root.dataset.step=String(step);
+  root.querySelectorAll('[data-journey]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.journey)===step)));
+  const scene=scenes[step],description=root.querySelector('.journey-description');
+  ['span','h3','p','small'].forEach((tag,i)=>description.querySelector(tag).textContent=scene[i]);
+  root.querySelector('[data-journey-next]').textContent=scene[4];
+  return;
+ }
+ const motion=e.target.closest('.motion-toggle');
+ if(motion){const root=motion.closest('.landing');const paused=root.classList.toggle('motion-paused');motion.setAttribute('aria-pressed',String(paused));motion.textContent=paused?'Play motion ▷':'Pause motion Ⅱ';return;}
+ const jump=e.target.closest('[data-scroll]');
+ if(jump){jump.closest('.landing').querySelector('[data-section="how"]').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});return;}
+ const b=e.target.closest('.btn');if(!b||b.disabled||b.tagName==='A'||(b.type==='submit'&&b.closest('form')))return;
+ const label=b.textContent.trim(); const current=location.hash.slice(1)||'home';
+ const routes={'Accept':'b6','Accept ticket':'b6','Reject':'b5','Scan next':'d0','Create receiving request':'b1','Prepare for offline use':'p1'};
+ if(routes[label]){location.hash=routes[label];return;}
+ if(/scan/i.test(label)){location.hash=current.startsWith('s')?'s2':'b2';return;}
+ if(/authorize|sign transfer/i.test(label)){location.hash='s5';return;}
+ toast('Design preview only — '+label+'. No wallet action or network transaction was performed.');
+});
+document.getElementById('frames').className='only-laptop';
+document.querySelectorAll('#viewseg button').forEach(b=>b.classList.toggle('on',b.dataset.v==='laptop'));
+document.getElementById('review-toggle').addEventListener('click',e=>{
+ const open=document.body.classList.toggle('review-open');
+ e.currentTarget.setAttribute('aria-expanded',String(open));
+});
+
+</script>
+</body>
+</html>
