@@ -1,4 +1,6 @@
 import { useEffect } from 'react'
+import { FeasibilityScreen } from './dev/FeasibilityScreen.tsx'
+import './styles/tokens.css'
 
 export default function App(): React.JSX.Element | null {
   const path = window.location.pathname
@@ -11,10 +13,10 @@ export default function App(): React.JSX.Element | null {
 
   if (path === '/') return null
   if (path === '/dev/feasibility') {
-    return <main><h1>Development harness</h1><p>Integrations have not been tested.</p></main>
+    return <FeasibilityScreen />
   }
   return (
-    <main>
+    <main className="development-page">
       <h1>Development route not found</h1>
       <p>Product routes are still part of the design preview.</p>
       <a href="/design/counterfoil-ui.html#/">Open the Counterfoil preview</a>

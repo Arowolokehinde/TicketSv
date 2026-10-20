@@ -68,3 +68,11 @@ The root React entry redirects to `/design/counterfoil-ui.html#/`, retaining an 
 `/dev/feasibility` is reserved for the integration harness. Product URLs remain prototype hash routes for now; the React route migration is later work. Unsupported paths show a development-only not-found message.
 
 Task 2: six built-browser tests passed across desktop 1440×1050 and phone 390×844, including original visual tokens, 35-screen registry, direct hash reloads and asset equality. Tests use Playwright's installed Chromium. Use `npx playwright install chromium` once after `npm ci` on a new machine.
+
+## Developer harness and final scaffold checks
+
+`/dev/feasibility` displays seven typed `not-tested` gates, testnet, and a disconnected wallet. It contains no interactive wallet, signing or broadcast action. SDK installation is not evidence of supported wallets; dependency versions remain provisional until real testing.
+
+Final clean-install run: `npm ci`, 3 Vitest tests, TypeScript build checking, Vite production build and 10 Playwright checks passed. Browser tests used desktop and phone viewports and reloaded the harness without an installed wallet. No requests outside the app origin (including other localhost ports), WebSockets, service worker registrations, app-created wallet globals or browser errors were observed in those startup tests. This is a bounded startup observation, not a native-wallet network monitor or offline compatibility claim.
+
+The three copied production preview files remain byte-identical to their source files. All nine pre-existing repository document/prototype files retain their baseline hashes. Production output consists of static HTML, JavaScript and CSS; the installed BSV SDK is unused at runtime until the feasibility work begins. No application server, secret or database is required for this stage.
