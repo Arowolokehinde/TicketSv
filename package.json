@@ -8,7 +8,10 @@
     "typecheck": "tsc -b",
     "build": "npm run typecheck && vite build",
     "test": "vitest run",
-    "preview": "vite preview --host 127.0.0.1 --port 4175 --strictPort"
+    "preview": "vite preview --host 127.0.0.1 --port 4175 --strictPort",
+    "test:browser": "playwright test",
+    "predev": "node scripts/sync-design-preview.mjs",
+    "prebuild": "node scripts/sync-design-preview.mjs"
   },
   "dependencies": {
     "@bsv/sdk": "2.8.11",

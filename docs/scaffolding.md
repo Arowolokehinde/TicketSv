@@ -60,3 +60,11 @@ Resolved provisional versions:
 - vitest: 4.1.11
 
 Task 1: clean install, two configuration tests, typecheck and Vite production build passed. All nine pre-existing document/prototype files match the baseline SHA-256 hashes.
+
+## Preview preservation
+
+The root React entry redirects to `/design/counterfoil-ui.html#/`, retaining an incoming hash when supplied. `scripts/sync-design-preview.mjs` copies exactly the HTML, CSS and demo-data script before dev/build. These copies are ignored by Git; the sources remain under `docs/superpowers/design/`. All three served production assets matched their sources byte for byte in browser tests. No iframe or HTML injection is used.
+
+`/dev/feasibility` is reserved for the integration harness. Product URLs remain prototype hash routes for now; the React route migration is later work. Unsupported paths show a development-only not-found message.
+
+Task 2: six built-browser tests passed across desktop 1440×1050 and phone 390×844, including original visual tokens, 35-screen registry, direct hash reloads and asset equality. Tests use Playwright's installed Chromium. Use `npx playwright install chromium` once after `npm ci` on a new machine.
