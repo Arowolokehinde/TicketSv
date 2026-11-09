@@ -1,21 +1,21 @@
-# Counterfoil — Offline Ticket Handoff
+# TicketSV — Offline Ticket Handoff
 
-A BSV ticket-handoff proof of concept with a native React website. The landing page, ticket-holder workspace, venue workspace and scanner workspace use the approved Counterfoil design. Wallet, SPV, transport and persistence integrations are not implemented yet: no real ticket is minted, verified, saved, transferred or broadcast. Sample tickets are explicitly labelled.
+A BSV ticket-handoff proof of concept with a native React website. The landing page, ticket-holder workspace, venue workspace and scanner workspace use the approved Counterfoil design. The developer harness contains explicit BRC-100 connection, noSend signing, local SPV and ticket-provenance experiments. Signed wallet sign-in and account-owned event drafts are integrated; ticket issuance, transport and durable ticket acceptance are not yet connected to the product screens. Product sample tickets are explicitly labelled; experiments do not broadcast automatically.
 
 ## Run locally
 
-Use Node **22.20.0** (`nvm use`) and npm **11.6.1**. There is no application backend or environment-secret requirement.
+Use Node **22.20.0** (`nvm use`) and npm **11.6.1**. Venue and Dashboard use the Express/PostgreSQL backend. Follow [backend setup and authentication](docs/backend-auth.md) before signing in; the public landing page can run by itself.
 
 ```bash
 npm ci
 npm run dev
 ```
 
-- Website: <http://127.0.0.1:5175/> renders the React landing page directly.
-- Ticket holder: <http://127.0.0.1:5175/tickets>, including receive, transfer and sample evidence pages.
-- Venue: <http://127.0.0.1:5175/venue>.
-- Scanner: <http://127.0.0.1:5175/scanner>.
-- Developer harness: <http://127.0.0.1:5175/dev/feasibility> lists seven integration gates as **Not tested**.
+- Website: <http://localhost:5175/> renders the React landing page directly.
+- Dashboard / ticket holder: <http://localhost:5175/tickets>, including receive, transfer and sample evidence pages.
+- Venue: <http://localhost:5175/venue>.
+- Scanner: <http://localhost:5175/scanner>.
+- Developer harness: <http://localhost:5175/dev/feasibility> offers connection, signing, header/SPV and venue-provenance controls. Seven full integration gates remain **Not tested** pending complete live evidence. Nothing contacts a wallet on page load.
 
 Each workspace has `/prepare`, `/headers` and `/activity` pages. Their initial states are real: no wallet connection, stored header snapshot or blockchain operation. Dependent actions are disabled until implemented. The sample collection can be hidden to see the empty state; that display choice is not persisted.
 
@@ -40,7 +40,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-Vitest runs unit tests only. Playwright runs `*.browser.test.ts` against a fresh production build at desktop and phone viewport sizes. Checks cover native page navigation/reloads, workspace separation, sample labelling, disabled unsupported operations, responsive layouts, reduced motion, startup requests and the inert developer harness. They do not establish offline or blockchain compatibility.
+The default Vitest run skips the PostgreSQL integration suite; run `npm run test:backend` and `npm run test:auth:browser` separately as described in the backend guide. Playwright runs `*.browser.test.ts` against a fresh production build at desktop and phone viewport sizes. Checks cover native page navigation/reloads, workspace separation, sample labelling, disabled unsupported operations, responsive layouts, reduced motion, startup requests and explicit wallet connection, testnet gating, cancellation, timeout and retry in the developer harness. They do not establish offline or blockchain compatibility.
 
 ## Preserve the design
 
@@ -52,13 +52,15 @@ Navigation uses ordinary links, so browser back, direct URLs and refresh work wi
 
 ## Integration boundary
 
-The Create BSV App React starter supplied the foundation. Its relay/auth/server-discovery helpers were omitted after audit; @bsv/sdk is installed but no WalletClient or remote tracker is instantiated. The network constant is testnet. No Express server, relay, hosted database, service worker or IndexedDB implementation has been added.
+The Create BSV App React starter supplied the foundation. Its relay/auth/server-discovery helpers were omitted after audit. WalletClient uses an explicit local desktop or native bridge transport; wallet access requires an operator action. Local proof verification also uses @bsv/sdk. There is no automatic wallet discovery or remote tracker. The network constant is testnet. The product now uses an Express API, PostgreSQL sessions and organiser event drafts. The reopening experiment has a dedicated offline worker; relay and hosted chain-service integration remain separate. The SPV experiment stores validated header snapshots in IndexedDB.
 
-The planned architecture uses wallet-held keys, local ticket/header storage and local SPV verification. Header sync and ARC submission will require connectivity. Offline SPV does not prove current unspentness, and mining evidence does not prevent repeated entrance use. Those are requirements for the following implementation stages, not claims about this scaffold.
+The architecture uses wallet-held keys and local SPV verification. Explicit header sync requires connectivity; ARC submission is still planned. Offline SPV does not prove current unspentness, and mining evidence does not prevent repeated entrance use. The current header experiment validates a bounded range from a pinned checkpoint without full difficulty-adjustment validation. See the [SPV runbook](docs/local-spv-experiment.md) for exact trust limits.
 
-## Next: real feasibility evidence
+## Wallet evidence and remaining feasibility work
 
-Follow Task 1 of the [parent implementation plan](docs/superpowers/plans/2026-10-16-offline-ticket.md) for real tests of:
+The online, read-only BSV Desktop check succeeded on testnet from `localhost`. BSV Desktop rejected the IP-address origin `127.0.0.1` for public identity requests. Read the [live evidence and repeatable runbook](docs/feasibility.md) and [compatibility observations](docs/compatibility.md). This does not prove offline signing or any ticket operation.
+
+Continue Task 1 of the [parent implementation plan](docs/superpowers/plans/2026-10-16-offline-ticket.md) for real tests of:
 
 1. BRC-100 wallet connection and exact tested versions.
 2. Offline signed PushDrop handoff using `noSend` and final Atomic BEEF.
@@ -69,5 +71,9 @@ Follow Task 1 of the [parent implementation plan](docs/superpowers/plans/2026-10
 7. Controlled conflicting transfers and actual outcomes.
 
 The harness cannot mark these gates passed. Record reproducible real evidence before building dependent product integrations or claiming the five live scenes work. Keep private keys, provider secrets and raw wallet storage out of this repository.
+
+The [offline signing runbook](docs/offline-signing-experiment.md) records the earlier app and Desktop wallet failures and the isolated-build experiment. The user's subsequent signing exports passed [independent evidence checks](docs/signing-result-review.md), followed by local SPV at anchor 1,762,325 with zero verification server contacts. Network isolation remains operator-reported; these observations do not close reopening or two-device compatibility gates.
+
+Next live experiment: [venue authenticity and ticket continuity](docs/ticket-authenticity-experiment.md). It creates a fresh same-wallet ticket fixture, verifies the venue's finalized-origin attestation, retains signed ticket lineage after proof compaction, and compares the actual recipient lock with an independently saved request. Synthetic tests cover these checks, but the new live controls still await operator evidence.
 
 See [scaffolding provenance and audit](docs/scaffolding.md), [the website correction plan](docs/superpowers/plans/2026-10-20-counterfoil-website.md), and [the design specification](docs/superpowers/specs/2026-10-16-offline-ticket-design.md).
