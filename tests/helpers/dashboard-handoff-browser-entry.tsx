@@ -1,0 +1,10 @@
+import {SavedTickets} from '../../src/ui/SavedTickets.tsx'
+import {createRoot} from 'react-dom/client'
+import {AuthProvider,RequireAuth} from '../../src/auth/AuthProvider.tsx'
+import {AttendeeDashboard} from '../../src/ui/AttendeeDashboard.tsx'
+import {Workspace} from '../../src/ui/Workspace.tsx'
+import {OfflineHandoff} from '../../src/ui/OfflineHandoff.tsx'
+export {organiserReviewStore} from '../../src/handoff/organiser-review.ts'
+export {recipientStore,recipientKey} from '../../src/handoff/store.ts'
+export {settlementStore} from '../../src/handoff/settlement.ts'
+export function mount(){createRoot(document.getElementById('root')!).render(location.pathname==='/offline/tickets'?<SavedTickets/>:location.pathname==='/offline/handoff'?<OfflineHandoff/>:<AuthProvider><RequireAuth><Workspace role="holder" title="Dashboard."><AttendeeDashboard/></Workspace></RequireAuth></AuthProvider>)}

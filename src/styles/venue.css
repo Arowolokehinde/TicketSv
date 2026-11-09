@@ -1,0 +1,75 @@
+.venue-events { --event-muted: #626356; }
+.venue-events p { font-size: 14px; line-height: 1.7; }
+.venue-events .event-help { font-size: 12px; line-height: 1.6; color: var(--event-muted); }
+.event-local-note { border-left: 2px solid var(--wine); padding: 6px 14px; color: var(--event-muted); max-width: 760px; margin: 16px 0 24px; }
+.event-list-heading, .event-editor-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
+.venue-events h2 { font: 38px/1.15 Georgia, serif; letter-spacing: -1px; margin: 10px 0; }
+.event-list-heading > div > p { margin: 10px 0 0; color: var(--event-muted); }
+.event-list-heading .btn { flex-shrink: 0; }
+.event-empty { text-align: center; border: 1px dashed var(--line); padding: 65px 24px; background: #faf8ed80; }
+.event-empty > span { font-size: 52px; color: var(--wine); }
+.event-empty h3 { font: 30px/1.25 Georgia, serif; margin: 20px 0 12px; }
+.event-editor-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 55px); align-items: start; }
+.event-form { background: var(--card); border: 1px solid var(--line); padding: clamp(20px, 3vw, 32px); min-width: 0; }
+.event-form fieldset { padding: 0; border: 0; margin: 0; min-width: 0; }
+.event-form legend { font: 23px Georgia, serif; margin-bottom: 24px; }
+.event-form label { display: block; font: 600 13px/1.5 sans-serif; margin: 0 0 20px; }
+.event-form :is(input, textarea, select) { width: 100%; min-width: 0; max-width: 100%; display: block; margin: 8px 0 0; padding: 12px; border: 1px solid #bdbba9; border-radius: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 sans-serif; }
+.event-form textarea { resize: vertical; min-height: 110px; }
+.event-form input[type=file] { font-size: 12px; }
+.event-form input::file-selector-button { background: var(--card); border: 1px solid var(--line); padding: 8px; margin-right: 10px; color: var(--wine); cursor: pointer; }
+.event-form :is(input, textarea, select):focus-visible, .venue-events button:focus-visible { outline: 2px solid var(--wine); outline-offset: 3px; }
+.event-form .event-help { margin: -10px 0 22px; }
+.event-field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.event-preview { min-width: 0; width: 100%; max-width: 420px; justify-self: center; }
+.event-preview > .home-eyebrow { display: block; margin-bottom: 16px; }
+.event-preview > article { background: var(--card); border: 1px solid var(--line); box-shadow: 0 12px 35px #292a2208; }
+.event-preview > .event-help { margin-top: 18px; }
+.event-cover { height: 144px; background: var(--wine); overflow: hidden; }
+.event-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.event-cover-art { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 18px; color: #faf8ed; gap: 8px; background: radial-gradient(ellipse at top right, #974b42, transparent 70%); }
+.event-cover-art > span { font: 9px monospace; letter-spacing: 1.5px; }
+.event-cover-art svg { width: 120px; max-height: 50%; stroke: #dce68b; stroke-width: 1.5; }
+.event-cover-art em { font: italic clamp(14px, 1.4vw, 19px) Georgia, serif; }
+.event-preview-body, .event-card-body { padding: 18px; overflow-wrap: anywhere; }
+.venue-events :is(.event-preview-body, .event-card-body) h3 { font: 24px/1.2 Georgia, serif; margin: 12px 0; letter-spacing: -.5px; }
+.event-preview-body h4 { font: 600 14px/1.5 sans-serif; margin: 16px 0 4px; }
+.event-when { color: var(--wine); }
+.event-description { white-space: pre-wrap; border-top: 1px solid var(--line); padding-top: 12px; margin-top: 14px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.event-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 18px; align-items: start; }
+.event-card { min-width: 0; border: 1px solid var(--line); background: var(--card); }
+.event-card .event-cover { height: 112px; }
+.event-card .event-cover-art { gap: 5px; padding: 12px; }
+.event-card .event-cover-art svg { width: 76px; }
+.event-card .event-cover-art em { font-size: 14px; }
+.event-card-body > h3, .event-card-body > p:not(.event-id) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.venue-events .event-card-body > p { font-size: 13px; line-height: 1.5; margin-bottom: 8px; }
+.venue-events .event-id { border-top: 1px dashed var(--line); margin: 12px 0; padding-top: 10px; color: var(--event-muted); font: 10px/1.5 monospace; overflow-wrap: anywhere; }
+.event-card-body .btn { padding: 10px 12px; }
+.event-saved { background: #dce68b60; border-left: 3px solid var(--wine); padding: 14px 18px; margin-bottom: 24px; }
+.event-error { background: #f4ded7; border-left: 3px solid var(--wine); color: #622422; padding: 16px; margin-block: 20px; font-size: 14px; line-height: 1.6; }
+.event-error > button { display: block; margin-top: 15px; }
+.event-text-button { background: transparent; border: 0; border-bottom: 1px solid var(--wine); padding: 4px 0; color: var(--wine); cursor: pointer; font: 13px sans-serif; margin-bottom: 12px; }
+@media (max-width: 1050px) { .event-editor-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) {
+  .event-list-heading, .event-editor-heading { align-items: flex-start; flex-direction: column; gap: 15px; }
+  .event-grid, .event-field-pair { grid-template-columns: minmax(0, 1fr); }
+  .event-field-pair { gap: 0; }
+  .venue-events h2 { font-size: 32px; }
+  .event-local-note { font-size: 12px !important; }
+}
+
+.venue-issuance { max-width: 1000px; margin-inline: auto; }
+.venue-issuance > p { max-width: 76ch; }
+.venue-issuance .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-block: 20px; }
+.venue-issuance select { display: block; max-width: 100%; padding: 12px; margin-block: 8px; background: var(--paper, #faf8ed); color: inherit; }
+.issuance-review { padding: clamp(20px, 4vw, 36px); border: 1px solid #d1cebc; margin-block: 24px; background: #faf8ed; }
+.issuance-review dl { margin: 0 0 24px; }
+.issuance-review dl > div { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; padding-block: 12px; border-bottom: 1px solid #dedbcf; }
+.issuance-review dt { font-weight: 600; }
+.issuance-review dd { margin: 0; overflow-wrap: anywhere; }
+.issuance-consent { display: flex; align-items: flex-start; gap: 12px; margin-block: 20px; }
+.issuance-consent input { flex: 0 0 auto; margin-top: 5px; }
+.issuance-report { padding: 20px; border-left: 3px solid #77352f; overflow-wrap: anywhere; }
+.event-card-body > .btn + .btn { margin-top: 10px; }
+@media (max-width: 600px) { .issuance-review dl > div { grid-template-columns: minmax(0, 1fr); gap: 6px; } .venue-issuance .actions .btn { width: 100%; } }

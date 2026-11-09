@@ -1,0 +1,18 @@
+{
+  "status": "success",
+  "value": {
+    "version": 536870912,
+    "previousHash": "00000000c3638a82b6a35dbd372eaa60f91d7480a38577697fc863ce9f7f2d28",
+    "merkleRoot": "d642c07af6a9fda4fa032221d3c3d260cda67825cfe9af5259e4647bd0822541",
+    "time": 1792579019,
+    "bits": 469826262,
+    "nonce": 353424774,
+    "height": 1764334,
+    "hash": "00000000005bff5cba9a2f557f306bfd448acae0cb37996f3c4b3a149940256a",
+    "headerId": 7067,
+    "previousHeaderId": 7065,
+    "chainWork": "00000000000000000000000000000000000000000000015828fe3ccad486145e",
+    "isChainTip": false,
+    "isActive": true
+  }
+}

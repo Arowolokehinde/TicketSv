@@ -11,16 +11,31 @@
     "preview": "vite preview --host 127.0.0.1 --port 4175 --strictPort",
     "test:browser": "playwright test",
     "predev": "node scripts/sync-design-preview.mjs",
-    "prebuild": "node scripts/sync-design-preview.mjs"
+    "prebuild": "node scripts/sync-design-preview.mjs",
+    "api": "node --experimental-strip-types server/index.ts",
+    "headers:collect": "node --experimental-strip-types server/header-worker.ts",
+    "db:migrate": "node --experimental-strip-types server/index.ts --migrate",
+    "backend:setup": "node scripts/setup-backend.mjs",
+    "test:backend": "node scripts/test-backend.mjs",
+    "test:auth:browser": "playwright test --config playwright.auth.config.ts"
   },
   "dependencies": {
+    "@bsv/auth-express-middleware": "2.2.10",
     "@bsv/sdk": "2.8.11",
+    "@vercel/functions": "3.11.0",
+    "express": "5.1.0",
+    "jsqr": "1.4.0",
+    "pg": "8.16.3",
+    "qrcode": "1.5.4",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",
+    "@types/express": "5.0.5",
     "@types/node": "24.19.2",
+    "@types/pg": "8.15.6",
+    "@types/qrcode": "1.5.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
@@ -29,7 +44,7 @@
     "vitest": "4.1.11"
   },
   "engines": {
-    "node": ">=22.20.0"
+    "node": "22.x"
   },
   "packageManager": "npm@11.6.1"
 }

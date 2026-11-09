@@ -10,3 +10,9 @@ test-results/
 .env.*
 !.env.example
 .DS_Store
+.vercel/
+artifacts/wallet-test/
+.vercel
+
+# Documentation Markdown files, including nested folders
+docs/**/*.md

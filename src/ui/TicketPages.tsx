@@ -36,7 +36,7 @@ export function CollectionPage(): React.JSX.Element {
         <aside className="handoff-note"><h3>Keep the package.<br />Keep the evidence.</h3><p>Offline acceptance cannot confirm a transfer or rule out a double-sale.</p></aside>
       </div>
     </div> : <section className="home-empty">
-      <div className="empty-stub" aria-hidden="true"><span>COUNTERFOIL / ADMIT ONE</span><i>Yours, soon.</i><b>— — — — — — — — — —</b></div>
+      <div className="empty-stub" aria-hidden="true"><span>TICKETSV / ADMIT ONE</span><i>Yours, soon.</i><b>— — — — — — — — — —</b></div>
       <div><span className="home-eyebrow">A TICKET. ITS OWN EVIDENCE.</span><h2>No tickets saved yet.</h2><p>Your next event starts with a receiving request. Exchange it with the sender by QR or file.</p><a className="btn primary" href="/tickets/receive">Receive your first ticket</a></div>
     </section>}
     <footer className="home-foot"><span>LOCAL STORAGE / YOUR DEVICE</span><p>Real ticket saving and reopening will be enabled with the storage integration. Sample tickets are not stored packages.</p></footer>
@@ -55,19 +55,7 @@ export function SampleTicketPage(): React.JSX.Element {
 }
 
 export function ReceivePage(): React.JSX.Element {
-  return <div className="receive-flow">
-    <a className="receive-back" href="/tickets">← My tickets</a>
-    <ol className="receive-steps"><li aria-current="step"><span>01</span>Share your request</li><li><span>02</span>Receive package</li><li><span>03</span>Verify &amp; save</li></ol>
-    <section className="request-start">
-      <span className="home-eyebrow">A HANDOFF STARTS WITH YOU</span>
-      <h2>Give the seller<br /><em>somewhere to send it.</em></h2>
-      <p>Your wallet supplies a receiving key. Share your receiving request by QR or file, then receive the seller’s signed ticket package.</p>
-      <IntegrationNotice>Your wallet is not connected. Receiving requests will be available after wallet integration.</IntegrationNotice>
-      <p>No receiving request has been created.</p>
-      <div className="request-start-actions"><button className="btn primary" disabled>Create receiving request</button><a href="/tickets/prepare">Check device preparation</a></div>
-      <small>Both people can exchange files remotely while connected, then check downloaded evidence offline on prepared devices.</small>
-    </section>
-  </div>
+ return <section className="request-start"><span className="home-eyebrow">FIND YOUR NEXT EVENT</span><h2>A ticket starts<br /><em>with an event.</em></h2><p>Browse published events, request a ticket using your wallet, and follow the organiser’s response in your Dashboard.</p><div className="actions"><a className="btn primary" href="/events">Explore events</a><a className="btn" href="/tickets">Back to dashboard</a></div></section>
 }
 
 export function TransferPage(): React.JSX.Element {

@@ -1,0 +1,18 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ticketsv
+      POSTGRES_DB: ticketsv
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run npm run backend:setup first}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - ticketsv_database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ticketsv -d ticketsv"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  ticketsv_database:

@@ -1,0 +1,22 @@
+.handoff-workspace .organiser-review { margin: 22px 0; padding: 22px; border: 1px solid #dfe6d1; background: #fffef8; border-radius: 16px; min-width: 0; }
+.handoff-workspace .organiser-review-heading { display: flex; align-items: center; gap: 10px; color: #566c3e; }
+.handoff-workspace .organiser-review .organiser-review-heading h3 { margin: 0; font: 600 17px/1.4 Arial, sans-serif; }
+.handoff-workspace .organiser-review-label { display: block; margin-top: 22px; color: #80886f; font: 600 10px/1.5 Arial, sans-serif; letter-spacing: 1px; text-transform: uppercase; }
+.handoff-workspace .organiser-review h4 { font: 600 27px/1.25 Georgia, serif; margin: 8px 0 12px; overflow-wrap: anywhere; }
+.handoff-workspace .organiser-review > p { color: #636e57; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.handoff-workspace .organiser-review > a { color: #79312e; font-size: 13px; }
+.handoff-workspace .organiser-review .organiser-match { display: table; padding: 8px 12px; background: #eef3df; border-radius: 8px; color: #4b6034; }
+.handoff-workspace .organiser-identity, .handoff-workspace .organiser-differences { margin: 16px 0; padding-top: 14px; border-top: 1px solid #e7ebdf; }
+.handoff-workspace .organiser-review summary { font: 600 12px/1.5 Arial, sans-serif; color: #677356; cursor: pointer; }
+.handoff-workspace .organiser-review code { display: block; margin-top: 12px; font-size: 11px; overflow-wrap: anywhere; }
+.handoff-workspace .organiser-differences { padding: 14px; border: 1px solid #e4d7b8; background: #faf5e9; border-radius: 10px; }
+.handoff-workspace .organiser-differences ul { margin-bottom: 0; padding-left: 18px; }
+.handoff-workspace .organiser-differences li { color: #786847; font-size: 12px; line-height: 1.6; margin-bottom: 8px; overflow-wrap: anywhere; }
+.handoff-workspace .organiser-review > .btn { margin: 8px 8px 0 0; }
+@media (max-width:600px) { .handoff-workspace .organiser-review { padding: 18px; } .handoff-workspace .organiser-review > .btn { width: 100%; margin-right: 0; } }
+
+.handoff-workspace .organiser-review > .event-error { color: #79312e; }
+
+.handoff-workspace .organiser-review .issuance-consent { display: flex; align-items: flex-start; gap: 10px; margin: 20px 0; font: 500 13px/1.6 Arial,sans-serif; }
+.handoff-workspace .organiser-review .issuance-consent input { flex: 0 0 auto; margin-top: 4px; accent-color: #79312e; }
+.handoff-workspace .organiser-review .btn::after { content: none; }

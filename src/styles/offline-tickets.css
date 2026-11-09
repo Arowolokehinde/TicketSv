@@ -1,0 +1,19 @@
+.offline-content { max-width: 1120px; margin: auto; padding: 48px 24px 80px; }
+.offline-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.offline-heading h1 { margin: 12px 0 20px; }
+.offline-content > p { max-width: 760px; }
+.offline-ticket-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 24px; margin: 32px 0; }
+.offline-ticket-card { background: var(--paper, #faf8ed); border: 1px solid var(--line, #cfcebc); border-top: 3px solid #773431; padding: 24px; min-width: 0; }
+.offline-library code { overflow-wrap: anywhere; }
+.offline-ticket-card h2 { font-size: 28px; margin: 20px 0 12px; }
+.offline-ticket-card .actions { margin-top: 24px; flex-wrap: wrap; }
+.offline-remove { border-top: 1px solid #cfcebc; margin-top: 20px; padding-top: 12px; }
+.offline-save { border-top: 1px solid #cfcebc; margin-top: 24px; padding-top: 20px; }
+.offline-save-status { padding-left: 20px; }
+@media (max-width: 600px) {
+ .offline-content { padding: 28px 16px 48px; }
+ .offline-heading { align-items: flex-start; flex-direction: column; gap: 0; }
+ .offline-library .site-header { gap: 12px; flex-wrap: wrap; }
+ .offline-library .site-context { display: none; }
+ .offline-ticket-card { padding: 20px; }
+}

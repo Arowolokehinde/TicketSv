@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Update offline app — TicketSV</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f8f8f2;color:#30362a;font:16px/1.6 Arial,sans-serif}main{max-width:640px;margin:8vh auto;padding:32px}a{color:#79312e}.brand{font:600 34px Georgia,serif;letter-spacing:-1.5px;text-decoration:none}h1{font-size:32px;line-height:1.2;margin-top:36px;letter-spacing:-1px}p{color:#68735b}.panel{border:1px solid #e0e6d4;border-radius:18px;background:#fffef9;padding:24px;margin-top:24px}button,.back{display:inline-block;padding:13px 20px;border:0;border-radius:10px;background:#79312e;color:#fffaf0;font:600 14px Arial,sans-serif;cursor:pointer;text-decoration:none}button:disabled{opacity:.6;cursor:wait}[hidden]{display:none!important}[role=status]{padding:14px;background:#eef3e2;border-radius:10px}button:focus-visible,a:focus-visible{outline:3px solid #92a35e;outline-offset:4px}.small{font-size:13px}
+</style>
+</head>
+<body><main>
+<a class="brand" href="/">TicketSV</a>
+<h1>Update the offline app.</h1>
+<p>This page loads outside the offline cache so you can check for the latest app.</p>
+<div class="panel">
+<p>Keep this page open. Close other TicketSV tabs if asked, so the new version can activate.</p>
+<p class="small">Your tickets, receiving requests and saved wallet records stay in this browser. This updates app files only.</p>
+<button id="update" type="button">Check for app update</button>
+<p id="status" role="status" hidden></p>
+<a class="back" id="back" href="/offline/handoff?step=send" hidden>Return to Send</a>
+</div>
+</main>
+<script>
+// This page is intentionally outside /offline/ and uses no cached app assets.
+// Never clear storage, unregister the worker, skipWaiting or take over a tab.
+const button=document.getElementById('update'),status=document.getElementById('status'),back=document.getElementById('back');
+let cleanup=()=>{};
+const say=text=>{status.hidden=false;status.textContent=text};
+function ready(){cleanup();button.disabled=false;back.hidden=false;say('The current offline app is ready. Return to Send, select your existing ticket and use Browse local files.');}
+button.addEventListener('click',async()=>{
+ cleanup();button.disabled=true;back.hidden=true;say('Checking for updated app files…');
+ try{
+  if(!navigator.onLine)throw Error('Reconnect to the internet to download the update.');
+  if(!('serviceWorker' in navigator)){ready();return;}
+  const expectedScope=new URL('/offline/',location.origin).href,expectedScript=new URL('/attendee-offline-worker.js',location.origin).href;
+  const registration=await navigator.serviceWorker.getRegistration(expectedScope);
+  if(!registration){ready();return;}
+  const current=registration.active||registration.waiting||registration.installing;
+  if(registration.scope!==expectedScope||current&&current.scriptURL!==expectedScript)throw Error('The saved offline installation does not match TicketSV. Its records have been left untouched.');
+  let timer;
+  try{await Promise.race([registration.update(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('The update check timed out. Stay online and try again.')),30000)})]);}finally{clearTimeout(timer);}
+  const worker=registration.installing||registration.waiting;
+  if(!worker){ready();return;}
+  const changed=()=>{
+   if(worker.state==='activated'){ready();return;}
+   if(worker.state==='redundant'){cleanup();button.disabled=false;say('The update did not install. Your existing records are retained. Stay online and try again.');return;}
+   if(worker.state==='installed'&&registration.active)say('Close your other TicketSV tabs in this Chrome profile, especially Handoff and Saved tickets. Keep this update page open. It will confirm when the new app is active.');
+   else say('Downloading and installing updated app files…');
+  };
+  cleanup=()=>{worker.removeEventListener('statechange',changed)};
+  worker.addEventListener('statechange',changed);changed();
+ }catch(error){button.disabled=false;say(error instanceof Error?error.message:'The update could not be checked. Stay online and retry.');}
+});
+</script>
+</body></html>

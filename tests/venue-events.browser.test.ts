@@ -1,0 +1,143 @@
+import { expect, test, type Page } from '@playwright/test'
+import { accountApi } from './helpers/account-api.ts'
+test.beforeEach(async ({ context }) => { await accountApi(context) })
+
+async function fillEvent(page: Page, name = 'Harbour Nights') {
+  await page.getByLabel('Event name', { exact: true }).fill(name)
+  await page.getByLabel('Description (optional)').fill('An evening of live music by the water.')
+  await page.getByLabel('Event date').fill('2027-06-12')
+  await page.getByLabel('Start time').fill('19:30')
+  await page.getByLabel('Timezone').fill('Africa/Lagos')
+  await page.getByLabel('Venue name').fill('Harbour Hall')
+  await page.getByLabel('Venue address').fill('14 Marina Road, Lagos')
+}
+
+test('create and edit an account event with stable ID across reload, without wallet calls', async ({ page, baseURL }) => {
+  const outside: string[] = []
+  page.on('request', request => {
+    if (!request.url().startsWith('blob:') && new URL(request.url()).origin !== new URL(baseURL!).origin) outside.push(request.url())
+  })
+  await page.goto('/venue')
+  await page.getByRole('button', { name: 'Create event', exact: true }).click()
+  await fillEvent(page)
+  await expect(page.getByRole('region', { name: 'Event preview' })).toContainText('Harbour Nights')
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Draft saved' })).toBeVisible()
+  const id = await page.locator('.event-id').textContent()
+  await page.reload()
+  await page.getByRole('button', { name: 'Edit Harbour Nights', exact: true }).click()
+  await expect(page.getByLabel('Start time')).toHaveValue('19:30')
+  await expect(page.getByLabel('Timezone')).toHaveValue('Africa/Lagos')
+  await page.getByLabel('Event name', { exact: true }).fill('Harbour Nights Live')
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Harbour Nights Live', exact: true })).toBeVisible()
+  expect(await page.locator('.event-id').textContent()).toBe(id)
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Harbour Nights Live', exact: true })).toBeVisible()
+  expect(outside).toEqual([])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
+})
+
+test('invalid fields stay editable; cancelling preserves the saved event', async ({ page }) => {
+  await page.goto('/venue')
+  await page.getByRole('button', { name: 'Create event', exact: true }).click()
+  await fillEvent(page)
+  await page.getByLabel('Event name', { exact: true }).fill('   ')
+  await page.getByLabel('Timezone').fill('not/a-zone')
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('event name')
+  await fillEvent(page)
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click()
+  await page.getByRole('button', { name: 'Edit Harbour Nights', exact: true }).click()
+  await page.getByLabel('Event name', { exact: true }).fill('Unsaved title')
+  page.once('dialog', dialog => dialog.accept())
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Harbour Nights', exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Unsaved title' })).toHaveCount(0)
+})
+
+test('cover is saved with the event and unsafe image types are rejected', async ({ page }) => {
+  await page.goto('/venue')
+  await page.getByRole('button', { name: 'Create event', exact: true }).click()
+  await fillEvent(page)
+  await page.getByLabel('Event image (optional)').setInputFiles({ name: 'bad.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg/>') })
+  await expect(page.getByRole('alert')).toContainText('PNG, JPEG or WebP')
+  await page.getByLabel('Event image (optional)').setInputFiles({ name: 'broken.png', mimeType: 'image/png', buffer: Buffer.from('not an image') })
+  await expect(page.getByRole('alert')).toContainText('could not be opened')
+  await page.getByLabel('Event image (optional)').setInputFiles({ name: 'large.png', mimeType: 'image/png', buffer: Buffer.alloc(2_000_001) })
+  await expect(page.getByRole('alert')).toContainText('up to 2 MB')
+  const png = await page.evaluate(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 100; canvas.height = 60
+    const context = canvas.getContext('2d')!
+    context.fillStyle = '#722f2e'; context.fillRect(0, 0, 100, 60)
+    return canvas.toDataURL('image/png').split(',')[1]!
+  })
+  await page.getByLabel('Event image (optional)').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') })
+  await expect(page.getByRole('region', { name: 'Event preview' }).getByRole('img')).toBeVisible()
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Draft saved' })).toBeVisible()
+  await page.reload()
+  await page.getByRole('button', { name: 'Edit Harbour Nights', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Event preview' }).getByRole('img')).toBeVisible()
+  await page.getByRole('button', { name: 'Remove image' }).click()
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Draft saved' })).toBeVisible()
+  await page.reload()
+  await page.getByRole('button', { name: 'Edit Harbour Nights', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Event preview' }).getByRole('img')).toHaveCount(0)
+})
+
+test('failed API save leaves the form intact and never claims success', async ({ page }) => {
+  await page.goto('/venue')
+  await page.getByRole('button', { name: 'Create event', exact: true }).click()
+  await fillEvent(page)
+  await page.route('**/api/events', route => route.fulfill({ status: 503, json: { error: 'The draft could not be saved.' } }))
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('could not be saved')
+  await expect(page.getByLabel('Event name', { exact: true })).toHaveValue('Harbour Nights')
+  await expect(page.getByText(/Draft saved/)).toHaveCount(0)
+})
+
+test('a stale editor cannot overwrite another tab’s saved changes', async ({ page, context }) => {
+  await page.goto('/venue')
+  await page.getByRole('button', { name: 'Create event', exact: true }).click()
+  await fillEvent(page)
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click()
+  await page.getByRole('button', { name: 'Edit Harbour Nights', exact: true }).click()
+  const second = await context.newPage()
+  await second.goto('/venue')
+  await second.getByRole('button', { name: 'Edit Harbour Nights', exact: true }).click()
+  await second.getByLabel('Event name', { exact: true }).fill('Newer event title')
+  await second.getByRole('button', { name: 'Save draft', exact: true }).click()
+  await expect(second.getByRole('heading', { name: 'Newer event title', exact: true })).toBeVisible()
+  await page.getByLabel('Event name', { exact: true }).fill('Stale title')
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('another tab')
+  await second.reload()
+  await expect(second.getByRole('heading', { name: 'Newer event title', exact: true })).toBeVisible()
+})
+
+test('a late edit response cannot replace the newer selected event', async ({ page, context }) => {
+  const fixture = await accountApi(context)
+  const common = { description: '', date: '2027-01-01', time: '18:00', timezone: 'UTC', venue: 'Hall', address: 'Street', image: null, status: 'draft', revision: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  fixture.records.set('a', { ...common, id: 'a', name: 'Event A' })
+  fixture.records.set('b', { ...common, id: 'b', name: 'Event B' })
+  let release!: () => void, started!: () => void
+  const held = new Promise<void>(resolve => { release = resolve })
+  const pending = new Promise<void>(resolve => { started = resolve })
+  await page.route('**/api/events/a', async route => { started(); await held; await route.fulfill({ json: fixture.records.get('a') }) })
+  await page.goto('/venue')
+  await page.getByRole('button', { name: 'Edit Event A', exact: true }).click()
+  await pending
+  await page.getByRole('button', { name: 'Edit Event B', exact: true }).click()
+  await expect(page.getByLabel('Event name', { exact: true })).toHaveValue('Event B')
+  const completed = page.waitForResponse(response => response.url().endsWith('/api/events/a'))
+  release(); await completed
+  await page.getByLabel('Event name', { exact: true }).fill('Updated B')
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click()
+  await expect(page.locator('.event-card')).toHaveCount(2)
+  expect(fixture.records.get('a').name).toBe('Event A')
+  expect(fixture.records.get('b').name).toBe('Updated B')
+})

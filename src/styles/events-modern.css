@@ -1,0 +1,122 @@
+/* Public discovery: only published event data, with account actions kept explicit. */
+.events-modern { --events-gutter: clamp(20px, 4vw, 64px); background: #f8f8f2; color: #2d3128; }
+.events-modern .market-header { position: sticky; top: 0; z-index: 10; padding: 19px var(--events-gutter); min-height: 88px; gap: 28px; background: #f8f8f2; border-color: #e1e4d8; box-shadow: 0 3px 16px #27302203; }
+.events-modern .market-header > .landing-wordmark { font-size: 32px; line-height: 1; }
+.events-modern .market-header nav { gap: 8px; margin-left: auto; }
+.events-modern .market-header nav > a { padding: 10px 14px; border-radius: 9px; color: #727a65; font: 600 12px/1.4 Arial, sans-serif; }
+.events-modern .market-header nav > a:hover { background: #edf0e3; }
+.events-modern .market-header nav > a[aria-current] { background: #e7edcd; color: #5d713f; }
+.events-modern .workspace-wallet-trigger { min-height: 44px; border-radius: 99px; padding: 12px 19px; font: 600 12px/1.4 Arial, sans-serif; letter-spacing: 0; text-transform: none; }
+.events-modern .market-content { max-width: none; padding: 38px var(--events-gutter) 70px; }
+.events-modern .market-intro { display: flex; align-items: center; justify-content: space-between; gap: 28px; margin: 0 0 30px; padding-bottom: 32px; border-bottom: 1px solid #e1e4d8; }
+.events-eyebrow { display: inline-flex; align-items: center; gap: 8px; color: #70785f; font: 600 9px/1.5 Arial, sans-serif; letter-spacing: 1.4px; }
+.events-eyebrow .dashboard-icon { width: 15px; height: 15px; color: var(--wine); }
+.events-modern .market-intro h1 { font: 600 clamp(40px, 4vw, 60px)/1.08 Arial, sans-serif; letter-spacing: -2.4px; margin: 18px 0 15px; }
+.events-modern .market-intro h1 em { font: italic 400 1.1em/1.05 Georgia, serif; letter-spacing: -2px; color: var(--wine); }
+.events-modern .market-intro p { max-width: 500px; margin: 0; font-size: 14px; color: #6b7360; line-height: 1.8; }
+.events-intro-mark { display: grid; place-items: center; width: 96px; height: 96px; flex: 0 0 auto; margin-right: 12px; background: #e3ebba; border: 1px solid #d9e2ab; border-radius: 28px; transform: rotate(10deg); box-shadow: 7px 9px 0 -2px #efeedf; }
+.events-intro-mark .dashboard-icon { width: 43px; height: 43px; color: #819754; transform: rotate(-10deg); }
+.events-collection-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+.events-collection-heading h2 { display: flex; align-items: center; gap: 10px; margin: 0; font: 600 22px/1.3 Arial, sans-serif; letter-spacing: -.6px; }
+.events-collection-heading h2 span { display: grid; place-items: center; min-width: 26px; height: 25px; padding: 0 7px; border: 1px solid #e1e5d3; border-radius: 8px; background: #edf0e3; color: #727c5c; font: 12px monospace; }
+.events-collection-heading p { margin: 7px 0 0; font-size: 12px; color: #707568; }
+.events-collection-note { display: inline-flex; align-items: center; gap: 7px; color: #6f795f; font: 11px/1.5 Arial, sans-serif; }
+.events-collection-note .dashboard-icon { width: 16px; height: 16px; }
+.events-modern .market-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 25px; margin-top: 0; align-items: stretch; }
+.events-modern .market-card { display: flex; flex-direction: column; padding: 0; min-width: 0; border: 1px solid #e1e5d8; border-radius: 19px; background: #fffefa; box-shadow: 0 4px 16px #353c2305; transition: transform .24s, box-shadow .24s; }
+.events-modern .market-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px #353c2310; }
+.public-event-cover { position: relative; }
+.events-modern .market-card .public-event-cover { padding: 0; }
+.events-modern .market-card .event-cover { height: 205px; border-radius: 18px 18px 0 0; background: #703a38; }
+.events-modern .market-card:nth-child(3n+2) .event-cover { background: #405e4b; }
+.events-modern .market-card:nth-child(3n+3) .event-cover { background: #765c46; }
+.events-modern .event-cover-art { position: relative; isolation: isolate; gap: 14px; padding: 24px; background: none; }
+.events-modern .event-cover-art::before { content: ''; position: absolute; z-index: -1; width: 180px; height: 180px; right: -60px; top: 45px; border: 1px solid #ffffff15; border-radius: 50%; box-shadow: 0 0 0 25px #ffffff06, 0 0 0 50px #ffffff04; }
+.events-modern .event-cover-art > span { font-size: 8px; color: #f1ddd1; }
+.events-modern .event-cover-art > svg { width: 105px; height: 63px; max-height: none; }
+.events-modern .event-cover-art > em { font-size: 15px; }
+.events-modern .market-card .event-cover-art > em { display: none; }
+.public-event-date { position: absolute; left: 18px; bottom: 15px; display: inline-flex; align-items: center; gap: 7px; padding: 7px 9px; border: 1px solid #ffffff29; border-radius: 8px; background: #fff9eb; color: #5d684d; font: 600 10px/1.5 Arial, sans-serif; box-shadow: 0 2px 7px #30221110; }
+.public-event-date .dashboard-icon { width: 14px; height: 14px; }
+.events-modern .market-card .public-event-info { display: flex; flex: 1; flex-direction: column; padding: 22px 24px 24px; }
+.public-event-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; color: #727c65; font: 11px/1.5 Arial, sans-serif; }
+.public-event-meta > span { display: inline-flex; align-items: center; gap: 6px; }
+.public-event-meta .dashboard-icon { width: 14px; height: 14px; }
+.public-event-meta time { white-space: nowrap; }
+.events-modern .market-card h2 { font: 28px/1.15 Georgia, serif; letter-spacing: -.5px; margin: 16px 0 10px; }
+.events-modern .public-event-description { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #6d7562; font-size: 12px; line-height: 1.7; margin: 0 0 24px; }
+.events-modern .public-event-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin-top: auto; padding: 12px 14px; min-height: 44px; border: 1px solid #dfe4d1; border-radius: 10px; background: #f6f8ee; color: #5a6946; font: 600 12px/1.5 Arial, sans-serif; letter-spacing: 0; text-transform: none; }
+.events-modern .public-event-link::after { content: none; }
+.public-event-link .dashboard-icon { width: 17px; height: 17px; }
+.events-modern .events-empty { margin: 0; padding: 48px 24px; border: 1px dashed #d6dfc5; border-radius: 19px; background: #f1f4e9; text-align: center; }
+.events-empty-icon { display: inline-grid; place-items: center; width: 58px; height: 58px; border: 1px solid #dfe7cc; border-radius: 17px; background: #e9efda; color: #8b9e65; }
+.events-empty-icon .dashboard-icon { width: 29px; height: 29px; }
+.events-empty h2 { font: 30px/1.2 Georgia, serif; margin: 20px 0 12px; }
+.events-modern .events-empty p { max-width: 430px; margin: 0 auto 24px; color: #6b755d; font-size: 13px; }
+.events-modern .events-empty .btn, .events-modern .events-more .btn, .events-modern .events-error .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 16px; border-radius: 10px; font: 600 12px/1.5 Arial, sans-serif; letter-spacing: 0; text-transform: none; }
+.events-modern .events-empty .btn::after, .events-modern .events-more .btn::after, .events-modern .events-error .btn::after { content: none; }
+.events-empty .btn .dashboard-icon, .events-more .btn .dashboard-icon, .events-error .btn .dashboard-icon { width: 16px; height: 16px; }
+.events-modern .events-error { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 22px; margin: 0 0 24px; border: 1px solid #e4d4bd; border-radius: 12px; background: #f7f0e4; color: #825c36; }
+.events-error > div { display: flex; align-items: center; gap: 12px; }
+.events-error p { margin: 0; font-size: 13px; }
+.events-more { display: flex; justify-content: center; margin-top: 30px; }
+.events-loading { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 25px; }
+.events-loading > div { border: 1px solid #e3e7d8; border-radius: 19px; background: #fffefa; overflow: hidden; padding-bottom: 24px; }
+.events-loading > div > span { display: block; height: 205px; background: #e9ecde; }
+.events-loading i { display: block; height: 11px; margin: 23px 24px 0; border-radius: 5px; background: #ecefe2; }
+.events-loading i:nth-last-child(1) { width: 50%; }
+.events-loading-status { color: #70785f; font-size: 12px; }
+.events-modern .receive-back { display: inline-flex; margin: 0 0 20px; color: #69765a; font: 12px/1.5 Arial, sans-serif; }
+.events-modern .market-detail { grid-template-columns: minmax(0, 1.65fr) minmax(290px, .85fr); align-items: start; gap: 28px; margin-top: 0; }
+.public-event-detail { min-width: 0; overflow: hidden; border: 1px solid #e1e5d8; border-radius: 20px; background: #fffefa; }
+.events-modern .market-detail .event-cover { height: 310px; border-radius: 19px 19px 0 0; background: #703a38; }
+.public-event-detail-body { padding: 28px; }
+.events-modern .market-detail h1 { font: 600 clamp(30px, 3vw, 44px)/1.1 Arial, sans-serif; letter-spacing: -1.4px; margin: 17px 0 20px; }
+.events-modern .market-date { color: #6f7b5d; font-size: 12px; }
+.events-modern .market-description { font-size: 14px; line-height: 1.85; color: #68715e; margin: 23px 0; }
+.events-modern .market-detail .wallet-advanced { padding-top: 16px; border-top: 1px solid #e6e9dd; }
+.events-modern .market-detail .wallet-advanced summary { font-size: 12px; }
+.events-modern .event-request-panel { position: sticky; top: 113px; padding: 27px; border: 1px solid #e1e5d8; border-radius: 19px; background: #fffefa; box-shadow: 0 4px 16px #353c2305; }
+.public-request-icon { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid #dfe7cd; border-radius: 11px; background: #edf2df; color: #879b60; margin-bottom: 22px; }
+.public-request-icon .dashboard-icon { width: 23px; height: 23px; }
+.events-modern .event-request-panel .home-eyebrow { color: #7a8368; font-size: 8px; letter-spacing: 1px; }
+.events-modern .event-request-panel h2 { font: 600 25px/1.2 Arial, sans-serif; letter-spacing: -.6px; margin: 15px 0; }
+.events-modern .event-request-panel p { font-size: 12px; line-height: 1.8; color: #6e785f; }
+.events-modern .event-request-panel .btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 45px; padding: 12px; border-radius: 10px; font: 600 12px/1.5 Arial, sans-serif; letter-spacing: 0; text-transform: none; }
+.events-modern .event-request-panel .issuance-consent { color: #66725a; font-size: 12px; line-height: 1.7; }
+.events-modern :is(a, button, input, summary):focus-visible { outline: 2px solid var(--wine); outline-offset: 4px; }
+@media (prefers-reduced-motion: no-preference) {
+ .events-modern .market-card { animation: collection-arrive .5s ease both; }
+ .events-loading > div { animation: events-load 1.4s ease-in-out infinite; }
+}
+@keyframes events-load { 50% { opacity: .55; } }
+@media (max-width: 900px) {
+ .events-modern .market-detail { grid-template-columns: minmax(0, 1fr); }
+ .events-modern .event-request-panel { position: static; }
+}
+@media (max-width: 700px) {
+ .events-modern .market-header { gap: 14px; padding-block: 16px; }
+ .events-modern .market-header nav { order: 3; width: 100%; justify-content: space-between; margin: 0; gap: 10px; }
+ .events-modern .market-header nav > a { padding: 8px 13px; font-size: 11px; }
+ .events-modern .workspace-wallet-trigger { margin-left: auto; padding: 11px 15px; font-size: 11px; }
+ .events-modern .market-content { padding-top: 28px; }
+ .events-modern .market-intro { gap: 15px; padding-bottom: 25px; }
+ .events-modern .market-intro h1 { font-size: 41px; letter-spacing: -1.8px; }
+ .events-intro-mark { width: 65px; height: 65px; border-radius: 19px; margin-right: 4px; }
+ .events-intro-mark .dashboard-icon { width: 31px; height: 31px; }
+ .events-collection-note { display: none; }
+ .events-modern .market-grid, .events-loading { gap: 20px; }
+ .events-modern .market-detail .event-cover { height: 230px; }
+ .public-event-detail-body, .events-modern .event-request-panel { padding: 23px; }
+}
+@media (max-width: 420px) {
+ .events-modern .market-header > .landing-wordmark { font-size: 29px; }
+ .events-modern .market-intro h1 { font-size: 36px; }
+ .events-intro-mark { display: none; }
+ .events-modern .market-intro p { font-size: 13px; }
+ .events-eyebrow { font-size: 8px; letter-spacing: .8px; }
+ .events-modern .events-error { flex-direction: column; align-items: stretch; }
+}
+@media (prefers-reduced-motion: reduce) {
+ .events-modern .market-card, .events-loading > div { animation: none; transition: none; }
+}

@@ -1,0 +1,73 @@
+.event-management .content { padding: clamp(24px, 4vw, 56px); min-width: 0; }
+.event-management .venue-events { max-width: 1280px; margin-inline: auto; color: #2c3327; font-family: Arial, sans-serif; }
+.event-management .venue-events .home-eyebrow { display: inline-flex; align-items: center; gap: 8px; color: #70795d; font: 600 10px/1.5 Arial, sans-serif; letter-spacing: 1.8px; }
+.event-management .home-eyebrow svg { width: 16px; height: 16px; color: #79312e; }
+.event-management .venue-events h1 { margin: 18px 0; font: 600 clamp(32px, 4vw, 52px)/1.1 Arial, sans-serif; letter-spacing: -2px; }
+.event-management .venue-events h1 em { color: #79312e; font-family: Georgia, serif; font-weight: 500; }
+.event-management .event-list-heading { margin: 0 0 32px; padding-bottom: 30px; border-bottom: 1px solid #e1e5d6; }
+.event-management .event-list-heading p { max-width: 55ch; font-size: 14px; color: #69715f; }
+.event-management .venue-events .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 12px 18px; border: 1px solid #e0e5d4; border-radius: 12px; background: #f6f8ef; color: #536143; font: 600 12px/1.4 Arial, sans-serif; text-transform: none; letter-spacing: 0; cursor: pointer; transition: background .18s ease, box-shadow .18s ease; }
+.event-management .venue-events .btn.primary { background: #79312e; color: #fffaf1; border-color: #79312e; }
+.event-management .venue-events .btn.primary::after { content: none; }
+.event-management .venue-events .btn:hover { box-shadow: 0 4px 14px #293b2010; background: #eaf0dc; }
+.event-management .venue-events .btn.primary:hover { background: #642723; }
+.event-management .venue-events .btn:disabled { opacity: .5; cursor: default; }
+.event-management .event-collection-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.event-management .event-collection-bar > div { display: flex; align-items: center; gap: 10px; }
+.event-management .event-collection-bar h2 { margin: 0; font: 600 20px/1.3 Arial, sans-serif; letter-spacing: -.6px; }
+.event-management .event-collection-bar > p { margin: 0; font-size: 12px; color: #777f6c; }
+.event-management .event-count { padding: 4px 9px; background: #eaf0dc; border-radius: 8px; color: #5e7046; font-size: 12px; }
+.event-management .event-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 24px; }
+.event-management .event-card { border: 1px solid #e2e5d9; border-radius: 20px; background: #fffef9; overflow: hidden; box-shadow: 0 6px 24px #26351c05; transition: box-shadow .2s ease; }
+.event-management .event-card:hover { box-shadow: 0 12px 32px #26351c10; }
+.event-management .event-card .event-cover { height: 174px; }
+.event-management .event-card-body { padding: 22px; }
+.event-management .venue-events .badge { display: inline-flex; padding: 5px 9px; border: 1px solid #e3e8d5; background: #f1f5e6; border-radius: 7px; color: #697550; font: 500 10px/1.4 Arial, sans-serif; }
+.event-management .venue-events .event-card-body h3 { font: 600 25px/1.25 Georgia, serif; margin: 14px 0 18px; }
+.event-management .event-card-body > .event-card-meta { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0; color: #414b38; font-size: 13px; line-height: 1.7; }
+.event-management .event-card-meta svg { flex-shrink: 0; margin-top: 2px; color: #87916f; width: 17px; height: 17px; }
+.event-management .event-reference { border-top: 1px solid #edf0e5; padding: 12px 0; margin-top: 18px; color: #7b826f; font-size: 11px; }
+.event-management .event-reference summary { cursor: pointer; }
+.event-management .event-reference code { display: block; padding-top: 10px; overflow-wrap: anywhere; }
+.event-management .event-card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.event-management .event-card-actions .btn { margin: 0; padding: 10px 8px; font-size: 11px; }
+.event-management .event-card-actions .btn svg { width: 16px; height: 16px; }
+.event-management .event-card-actions .primary { grid-column: 1 / -1; }
+.event-management .event-empty { border-color: #dfe6cd; border-radius: 20px; background: #f5f7ec; }
+.event-management .event-editor-heading { margin-bottom: 28px; }
+.event-management .event-editor-grid { gap: 28px; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+.event-management .event-form { border: 1px solid #e1e6d5; background: #fffef9; border-radius: 20px; }
+.event-management .event-form legend { font: 600 18px/1.4 Arial, sans-serif; color: #414d35; }
+.event-management .event-form :is(input, textarea, select) { border: 1px solid #dde3d0; border-radius: 10px; background: #f9faf4; font-size: 14px; padding: 12px; }
+.event-management .event-form input::file-selector-button { border-radius: 7px; border: 0; background: #eaf0d9; color: #5f7044; }
+.event-management .event-form .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.event-management .event-preview { position: sticky; top: 116px; }
+.event-management .event-preview article { border: 1px solid #e0e6d2; border-radius: 18px; overflow: hidden; background: #fffef9; }
+.event-management .event-preview .event-cover { height: 190px; }
+.event-management .event-preview-body { padding: 24px; }
+.event-management .event-saved, .event-management .event-error { border-radius: 12px; }
+@media (max-width: 1100px) { .event-management .event-editor-grid { grid-template-columns: minmax(0, 1fr); } .event-management .event-preview { position: static; } }
+@media (max-width: 600px) {
+ .event-management .content { padding: 28px 20px; }
+ .event-management .event-list-heading { align-items: flex-start; gap: 22px; }
+ .event-management .event-list-heading > .btn { width: 100%; }
+ .event-management .event-collection-bar { align-items: flex-start; flex-direction: column; gap: 8px; }
+ .event-management .event-card-body { padding: 20px; }
+ .event-management .event-editor-heading { gap: 8px; }
+ .event-management .event-form { padding: 20px; }
+}
+@media (prefers-reduced-motion: reduce) { .event-management .event-card, .event-management .venue-events .btn { transition: none; } }
+/* Search stays in the form; only the results list scrolls. */
+.event-management .timezone-picker { position: relative; margin-bottom: 20px; }
+.event-management .timezone-picker > label { margin-bottom: 8px; }
+.event-management .timezone-input-wrap { position: relative; }
+.event-management .timezone-input-wrap input { margin-top: 0; padding-right: 36px; text-overflow: ellipsis; }
+.event-management .timezone-chevron { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #707b61; }
+.event-management .timezone-menu { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 12; padding: 6px; border: 1px solid #dce3cf; border-radius: 12px; background: #fffef9; box-shadow: 0 12px 32px #26351c20; }
+.event-management .timezone-menu-above { top: auto; bottom: calc(100% - 20px); }
+.event-management .timezone-menu-caption { padding: 7px 10px; font: 600 10px/1.5 Arial, sans-serif; color: #7a846b; letter-spacing: .5px; }
+.event-management .timezone-options { max-height: min(224px, 32vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.event-management .timezone-option { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px; padding: 10px; border-radius: 7px; font: 13px/1.5 Arial, sans-serif; cursor: pointer; overflow-wrap: anywhere; }
+.event-management .timezone-option:is(:hover,.active) { background: #edf2e1; }
+.event-management .timezone-option[aria-selected="true"] { color: #79312e; font-weight: 600; }
+.event-management .timezone-options p { margin: 0; padding: 14px 10px; font-size: 13px; color: #747c68; }

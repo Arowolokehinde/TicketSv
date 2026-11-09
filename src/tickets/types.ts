@@ -1,0 +1,9 @@
+export type Outpoint={txid:string;index:number}
+export type KeyBinding={publicKey:string;protocolID:[2,string];keyID:string;counterparty:string}
+export type ReceiveRequest={kind:'ticket-request';version:1;network:'testnet';requestId:string;recipient:KeyBinding}
+export type Issuance={eventId:string;ticketId:string;origin:Outpoint;issuerIdentity:string;signedBytesBase64:string;signatureBase64:string;signingKey:KeyBinding}
+export type TicketPackage={kind:'ticket-package';version:1;network:'testnet';issuance:Issuance;current:Outpoint;request:ReceiveRequest;lineageRawTxs:string[];atomicBeefBase64:string}
+export type Check={name:'issuer'|'continuity'|'recipient'|'transaction'|'anchors';status:'pass'|'fail'|'incomplete';reason:string}
+export type Verification={verdict:'verified'|'incomplete'|'rejected';checks:Check[];snapshotId?:string;presentedTransferMined:boolean;anchorHeights:number[]}
+export const ISSUER_PROTOCOL:[2,string]=[2,'counterfoil ticket issuance']
+export const RECEIVE_PROTOCOL:[2,string]=[2,'counterfoil ticket receiving']

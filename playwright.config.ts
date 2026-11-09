@@ -2,6 +2,7 @@ import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests',
+  testIgnore: '**/signed-auth.browser.test.ts',
   testMatch: '**/*.browser.test.ts',
   fullyParallel: true,
   workers: 2,

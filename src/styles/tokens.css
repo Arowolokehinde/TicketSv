@@ -33,3 +33,32 @@ h1 { font: normal clamp(36px, 5vw, 55px)/1.1 Georgia, serif; letter-spacing: -1.
   .gate-list li { grid-template-columns: 22px minmax(0, 1fr); gap: 7px 12px; }
   .gate-status { grid-column: 2; justify-self: start; }
 }
+
+.wallet-panel { margin-top: 28px; padding: 26px; background: var(--card); border: 1px solid #c4bfaa; }
+.wallet-panel h2 { font: normal 30px/1.2 Georgia, serif; margin: 0 0 20px; }
+.wallet-panel p { font-size: 13px; line-height: 1.8; }
+.wallet-panel label { display: block; font: 11px/1.7 monospace; margin: 22px 0 8px; }
+.wallet-panel select { width: 100%; max-width: 500px; padding: 13px; border: 1px solid #aaa68f; background: var(--paper); color: var(--ink); font-size: 13px; }
+.wallet-panel .wallet-help { font-size: 11px; color: #55574a; }
+.wallet-panel select:focus-visible { outline: 2px solid var(--wine); outline-offset: 3px; }
+.wallet-panel [role="status"] { border-left: 2px solid var(--wine); padding-left: 12px; margin-top: 24px; }
+.wallet-error { background: #f5dfd5; border-left: 3px solid #a03227; padding: 14px; }
+.wallet-evidence { border-top: 1px solid #c4bfaa; margin-top: 25px; padding-top: 20px; }
+.wallet-evidence dl { display: grid; grid-template-columns: minmax(100px, .4fr) minmax(0, 1fr); gap: 12px; font: 12px/1.8 monospace; }
+.wallet-evidence dt { color: #55574a; }
+.wallet-evidence dd { margin: 0; overflow-wrap: anywhere; }
+.wallet-call-log { border-top: 1px dashed #c4bfaa; margin-top: 25px; padding-top: 20px; font: 12px/1.8 monospace; }
+.wallet-call-log summary { cursor: pointer; }
+@media (max-width: 600px) { .wallet-panel { padding: 20px; } .wallet-evidence dl { grid-template-columns: minmax(0, 1fr); gap: 6px; } .wallet-evidence dd { margin-bottom: 12px; } }
+.experiment-check { display: flex; gap: 10px; align-items: flex-start; margin: 16px 0; }
+.experiment-check input { width: auto; flex: 0 0 auto; margin-top: 4px; }
+.experiment-id { overflow-wrap: anywhere; }
+
+.spv-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0; }
+.spv-id { overflow-wrap: anywhere; }
+.spv-panel input[type="file"] { display: block; max-width: 100%; margin: 0.75rem 0; }
+.spv-panel details { overflow-wrap: anywhere; }
+.spv-result { border-left: 3px solid currentColor; padding-left: 1rem; }
+.ticket-input { display: block; width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid #aaa68f; background: var(--paper); color: var(--ink); font: 13px monospace; }
+.ticket-auth-panel input[type="file"] { display: block; max-width: 100%; margin-top: 8px; }
+.ticket-auth-panel li { overflow-wrap: anywhere; }
