@@ -36,7 +36,7 @@ it('never checkpoints matching but invalid or unlinked provider headers',async()
  const saved:unknown[]=[]
  await expect(syncHeaders(b.height,makeSnapshot([records[0]]),async(_p,h)=>h===a.height?records[0]:{...records[0],height:b.height},new AbortController().signal,undefined,{onCheckpoint:async s=>{saved.push(s)}})).rejects.toThrow(/linkage/i)
  expect(saved).toEqual([])
- await expect(syncHeaders(a.height,undefined,async()=>({...records[0],hex:'00'.repeat(80)}),new AbortController().signal,undefined,{onCheckpoint:async s=>{saved.push(s)}})).rejects.toThrow()
+ await expect(syncHeaders(a.height,undefined,async()=>({...records[0],hex:'00'.repeat(80)}),new AbortController().signal,undefined,{onCheckpoint:async s=>{saved.push(s)}})).rejects.toThrow('Invalid compact target')
  expect(saved).toEqual([])
 })
 it('does not publish partial replacement history during a full recheck',async()=>{
@@ -53,7 +53,7 @@ it('fails on unavailable sources, aborted work and excessive ranges',async()=>{
  const get=vi.fn(async()=>{throw new Error('unavailable')})
  await expect(syncHeaders(b.height,undefined,get,new AbortController().signal)).rejects.toThrow('unavailable')
  const c=new AbortController();c.abort();get.mockClear()
- await expect(syncHeaders(b.height,undefined,get,c.signal)).rejects.toThrow()
+ await expect(syncHeaders(b.height,undefined,get,c.signal)).rejects.toThrow('This operation was aborted')
  expect(get).not.toHaveBeenCalled()
  await expect(syncHeaders(Number.MAX_SAFE_INTEGER,undefined,get,new AbortController().signal)).rejects.toThrow(/range/i)
 })
@@ -102,7 +102,7 @@ it.each(['operator','deadline'])('cancels a stalled response body on %s without 
 it('rejects a late header result after active sync cancellation',async()=>{
  const c=new AbortController();let release!:()=>void;const held=new Promise<void>(r=>{release=r})
  const work=syncHeaders(b.height,previous,async(_p,h)=>{await held;return records[h-a.height]},c.signal)
- c.abort();release();await expect(work).rejects.toThrow()
+ c.abort();release();await expect(work).rejects.toThrow('This operation was aborted')
 })
 it('retries a transport failure at the same height and records both attempts',async()=>{
  vi.useFakeTimers()

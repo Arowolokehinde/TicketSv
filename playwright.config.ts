@@ -12,7 +12,7 @@ export default defineConfig({
     { name: 'phone', use: { viewport: { width: 390, height: 844 } } },
   ],
   webServer: {
-    command: 'npm run build && npm run preview',
+    command: 'VITE_DEV_ROUTES=true npm run build && npm run preview',
     url: 'http://127.0.0.1:4175',
     reuseExistingServer: false,
     stdout: 'pipe',

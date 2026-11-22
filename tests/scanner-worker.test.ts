@@ -7,7 +7,7 @@ function worker(){
  run.call({emitFile:(asset:{fileName:string;source:string})=>outputs.push(asset)}, {},{
   'index.html':{type:'asset',source:'<html>Scanner</html>'},'assets/app.js':{type:'chunk',code:'/* synthetic app */'},
  })
- const source=outputs.find(x=>x.fileName==='scanner-offline-worker.js')!.source
+ const source=outputs.find(x=>x.fileName==='ticketsv-offline-worker.js')!.source
  const handlers:Record<string,(e:Record<string,unknown>)=>void>={}
  const match=vi.fn(async(path:string)=>new Response(path==='index.html'?'Scanner':'Cached file'))
  const addAll=vi.fn(),get=vi.fn(),cache={match,addAll}
@@ -17,11 +17,11 @@ function worker(){
 }
 it('checks scanner cache readiness without fetching missing files',async()=>{
  const w=worker(),postMessage=vi.fn(),pending:Promise<unknown>[]=[]
- w.handlers.message({data:'CHECK_SCANNER_CACHE',ports:[{postMessage}],waitUntil:(p:Promise<unknown>)=>pending.push(p)})
+ w.handlers.message({data:'CHECK_APP_CACHE',ports:[{postMessage}],waitUntil:(p:Promise<unknown>)=>pending.push(p)})
  await Promise.all(pending);expect(postMessage).toHaveBeenCalledWith({ready:true})
  expect(w.get).not.toHaveBeenCalled();expect(w.addAll).not.toHaveBeenCalled()
  w.match.mockResolvedValueOnce(undefined as unknown as Response)
- pending.length=0;w.handlers.message({data:'CHECK_SCANNER_CACHE',ports:[{postMessage}],waitUntil:(p:Promise<unknown>)=>pending.push(p)})
+ pending.length=0;w.handlers.message({data:'CHECK_APP_CACHE',ports:[{postMessage}],waitUntil:(p:Promise<unknown>)=>pending.push(p)})
  await Promise.all(pending);expect(postMessage).toHaveBeenLastCalledWith({ready:false});expect(w.addAll).not.toHaveBeenCalled()
 })
 it('serves scanner and preparation deep links from the cached shell without network fallback',async()=>{

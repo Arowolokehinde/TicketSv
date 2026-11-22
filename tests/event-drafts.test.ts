@@ -16,7 +16,7 @@ describe('event draft validation', () => {
     expect(validateEventDetails({ ...details, date: '2024-02-29' }).date).toBe('2024-02-29')
   })
   it('rejects unsafe or excessive image data', () => {
-    expect(() => validateEventDetails({ ...details, image: new Blob(['<svg/>'], { type: 'image/svg+xml' }) })).toThrow()
-    expect(() => validateEventDetails({ ...details, image: new Blob([new Uint8Array(2_000_001)], { type: 'image/png' }) })).toThrow()
+    expect(() => validateEventDetails({ ...details, image: new Blob(['<svg/>'], { type: 'image/svg+xml' }) })).toThrow('Choose a PNG, JPEG or WebP image up to 2 MB.')
+    expect(() => validateEventDetails({ ...details, image: new Blob([new Uint8Array(2_000_001)], { type: 'image/png' }) })).toThrow('Choose a PNG, JPEG or WebP image up to 2 MB.')
   })
 })

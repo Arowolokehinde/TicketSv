@@ -16,3 +16,18 @@ artifacts/wallet-test/
 
 # Documentation Markdown files, including nested folders
 docs/**/*.md
+# Published records: referenced by the README, the code or the review.
+!docs/arc-submission-experiment.md
+!docs/backend-auth.md
+!docs/compatibility.md
+!docs/conflicting-transfers-experiment.md
+!docs/demo-script.md
+!docs/durable-issuance-experiment.md
+!docs/feasibility.md
+!docs/local-spv-experiment.md
+!docs/offline-reopening-experiment.md
+!docs/offline-signing-experiment.md
+!docs/signing-incident-report.md
+!docs/signing-result-review.md
+!docs/ticket-authenticity-experiment.md
+!docs/wallet-import-experiment.md

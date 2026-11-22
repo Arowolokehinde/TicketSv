@@ -58,16 +58,16 @@
 }
 @media (prefers-reduced-motion: reduce) { .event-management .event-card, .event-management .venue-events .btn { transition: none; } }
 /* Search stays in the form; only the results list scrolls. */
-.event-management .timezone-picker { position: relative; margin-bottom: 20px; }
-.event-management .timezone-picker > label { margin-bottom: 8px; }
-.event-management .timezone-input-wrap { position: relative; }
-.event-management .timezone-input-wrap input { margin-top: 0; padding-right: 36px; text-overflow: ellipsis; }
-.event-management .timezone-chevron { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #707b61; }
-.event-management .timezone-menu { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 12; padding: 6px; border: 1px solid #dce3cf; border-radius: 12px; background: #fffef9; box-shadow: 0 12px 32px #26351c20; }
-.event-management .timezone-menu-above { top: auto; bottom: calc(100% - 20px); }
-.event-management .timezone-menu-caption { padding: 7px 10px; font: 600 10px/1.5 Arial, sans-serif; color: #7a846b; letter-spacing: .5px; }
-.event-management .timezone-options { max-height: min(224px, 32vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
-.event-management .timezone-option { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px; padding: 10px; border-radius: 7px; font: 13px/1.5 Arial, sans-serif; cursor: pointer; overflow-wrap: anywhere; }
-.event-management .timezone-option:is(:hover,.active) { background: #edf2e1; }
-.event-management .timezone-option[aria-selected="true"] { color: #79312e; font-weight: 600; }
-.event-management .timezone-options p { margin: 0; padding: 14px 10px; font-size: 13px; color: #747c68; }
+.event-management :is(.timezone-picker, .time-picker) { position: relative; margin-bottom: 20px; }
+.event-management :is(.timezone-picker, .time-picker) > label { margin-bottom: 8px; }
+.event-management :is(.timezone-input-wrap, .time-input-wrap) { position: relative; }
+.event-management :is(.timezone-input-wrap, .time-input-wrap) input { margin-top: 0; padding-right: 36px; text-overflow: ellipsis; }
+.event-management :is(.timezone-chevron, .time-chevron) { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #707b61; }
+.event-management :is(.timezone-menu, .time-menu) { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 12; padding: 6px; border: 1px solid #dce3cf; border-radius: 12px; background: #fffef9; box-shadow: 0 12px 32px #26351c20; }
+.event-management :is(.timezone-menu-above, .time-menu-above) { top: auto; bottom: calc(100% - 20px); }
+.event-management :is(.timezone-menu-caption, .time-menu-caption) { padding: 7px 10px; font: 600 10px/1.5 Arial, sans-serif; color: #7a846b; letter-spacing: .5px; }
+.event-management :is(.timezone-options, .time-options) { max-height: min(224px, 32vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.event-management :is(.timezone-option, .time-option) { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px; padding: 10px; border-radius: 7px; font: 13px/1.5 Arial, sans-serif; cursor: pointer; overflow-wrap: anywhere; }
+.event-management :is(.timezone-option, .time-option):is(:hover,.active) { background: #edf2e1; }
+.event-management :is(.timezone-option, .time-option)[aria-selected="true"] { color: #79312e; font-weight: 600; }
+.event-management :is(.timezone-options, .time-options) p { margin: 0; padding: 14px 10px; font-size: 13px; color: #747c68; }

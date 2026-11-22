@@ -1,0 +1,202 @@
+{
+ "pkg": {
+  "kind": "ticket-package",
+  "current": {
+   "txid": "bb7ce48acd35109a02d28187e3e04ba1a74ae73192fd5a580b71d123b2ee34bc",
+   "index": 0
+  },
+  "network": "testnet",
+  "request": {
+   "kind": "ticket-request",
+   "network": "testnet",
+   "version": 1,
+   "recipient": {
+    "keyID": "af0ae42a-a6ac-4bc8-b932-724b80ccb945",
+    "publicKey": "0220036a3387c1b093d18e02adf7b367c6fdbf5429faebfde94e11ccf651163be8",
+    "protocolID": [
+     2,
+     "counterfoil ticket receiving"
+    ],
+    "counterparty": "self"
+   },
+   "requestId": "af0ae42a-a6ac-4bc8-b932-724b80ccb945"
+  },
+  "version": 1,
+  "issuance": {
+   "origin": {
+    "txid": "172722dc7dd338423a79b06c2f116371ccb9f48810b24a25c5080ea7adf312d7",
+    "index": 0
+   },
+   "eventId": "f11ec4af-c2b6-445d-9458-e69364b9e611",
+   "ticketId": "339104f9-c153-44a3-a217-4b735455c06b",
+   "signingKey": {
+    "keyID": "172722dc7dd338423a79b06c2f116371ccb9f48810b24a25c5080ea7adf312d7.0",
+    "publicKey": "02a04e7904ff4f6665e0488fa5ff523db0c5dea201bae577a15800dcabc3c2bd53",
+    "protocolID": [
+     2,
+     "counterfoil ticket issuance"
+    ],
+    "counterparty": "anyone"
+   },
+   "issuerIdentity": "024818ee4e8ecc2dbc2d11383742b83a58d20f405f9f307bebd1adaae203abcf12",
+   "signatureBase64": "MEQCIFr8vrJHJ/HXkmzcfFdZ34Eo7C7WM0/enB5GNlhGgh9FAiAE358VtJ0h269YcJfQgS6OYr6aTplDkcEE5+mIx4M7ow==",
+   "signedBytesBase64": "WyJvZmZsaW5lLXRpY2tldC1pc3N1YW5jZSIsMSwidGVzdG5ldCIsImYxMWVjNGFmLWMyYjYtNDQ1ZC05NDU4LWU2OTM2NGI5ZTYxMSIsIjMzOTEwNGY5LWMxNTMtNDRhMy1hMjE3LTRiNzM1NDU1YzA2YiIsIjE3MjcyMmRjN2RkMzM4NDIzYTc5YjA2YzJmMTE2MzcxY2NiOWY0ODgxMGIyNGEyNWM1MDgwZWE3YWRmMzEyZDciLDBd"
+  },
+  "lineageRawTxs": [
+   "0100000001481a845ae978f2e0892e797b92c3d9e952def892084cc71dcdb5ed03bcbee1ea000000006b483045022100f4e436f29f77d6319c2f4c517a14b42f27c2d983d2f0f41ec59f83be5d96230002204305ba53b9ebcbf70c619c7dc006180c9e86930fdda3f41ca2c20b291277d6314121035d5e01ffe3f025913c7e8e22f872cae06d78ae1e9b05c175bd75e87c53de2373ffffffff020100000000000000c321029d8a30c901baa46bae11a9381cde08b0e40857c97a24b46b3f068a0a6c75b773ac4c9d5b226f66666c696e652d7469636b6574222c312c22746573746e6574222c2266313165633461662d633262362d343435642d393435382d653639333634623965363131222c2233333931303466392d633135332d343461332d613231372d346237333534353563303662222c6e756c6c2c6e756c6c2c2235343336356562632d613964612d343339362d383233612d346364386463366661616663225d7538110000000000001976a91438449db3d0048f4220b90cd4f9461e004507932888ac00000000",
+   "0100000002d712f3ada70e08c5254ab21088f4b9cc7163112f6cb0793a4238d37ddc222717000000004847304402201893a2886c322e5ae09a39c4c187f259daae1ab18633e7765f83851980765b7102205fee915bed50ad7d6daddaecaafb384360058b2071a477af8b24f6a9cc2ba09e41ffffffff21902e2aaf5b41eceaefd755bca7dd4da3abff435ad62e48170c0706fa2bf29b0000000049483045022100d4c4f61cf2a2cd211cc1755b0a65de39542a34c23597601a4e7bf766cacab4eb02200c9bc379bb0fa5736a16d95aadbb874c2bc33543706a7b48b7d092eb2ba4cce041ffffffff010100000000000000fdfe00210220036a3387c1b093d18e02adf7b367c6fdbf5429faebfde94e11ccf651163be8ac4cd85b226f66666c696e652d7469636b6574222c312c22746573746e6574222c2266313165633461662d633262362d343435642d393435382d653639333634623965363131222c2233333931303466392d633135332d343461332d613231372d346237333534353563303662222c2231373237323264633764643333383432336137396230366332663131363337316363623966343838313062323461323563353038306561376164663331326437222c302c2261663061653432612d613661632d346263382d623933322d373234623830636362393435225d7500000000"
+  ],
+  "atomicBeefBase64": "AQEBAbw07rIj0XELWFr9kjHnSqehS+Djh4HSApoQNc2K5Hy7AQC+7wH+dP0aAAYCNgJqPCVIW+PExAogfyieuHMVvqGef8fFMkWjx1/lKJHGUjcCvDTusiPRcQtYWv2SMedKp6FL4OOHgdICmhA1zYrkfLsBGgBAkEP7fBD+14ROhhFYJ0yKWHmu9VMByXGDjDD4N10ekAEMABS17Vje1byQEkGkZ3cGMHCEy8+jZbhMDLJWkt3kZRRNAQcAUCeiMvfNJZcMsqnfKf83WxcbY3bE6C22IjHNcejCOhkBAgCRK68dc0Px/lDO0cAlrUoHaS+dfKbmKEWFpdgx11lJJAEAAA5nqhhOQTMi8Fy75lBAQsivjmsEYC3snn5br5+OK4ZXAQEAAAAC1xLzracOCMUlSrIQiPS5zHFjES9ssHk6QjjTfdwiJxcAAAAASEcwRAIgGJOiiGwyLlrgmjnEwYfyWdquGrGGM+d2X4OFGYB2W3ECIF/ukVvtUK19ba3a7Kr7OENgBYsgcaR3r4sk9qnMK6CeQf////8hkC4qr1tB7Orv11W8p91No6v/Q1rWLkgXDAcG+ivymwAAAABJSDBFAiEA1MT2HPKizSEcwXVbCmXeOVQqNMI1l2AaTnv3ZsrKtOsCIAybw3m7D6VzahbZWq27h0wrwzVDcGp7SLfQkusrpMzgQf////8BAQAAAAAAAAD9/gAhAiADajOHwbCT0Y4CrfezZ8b9v1Qp+uv96U4RzPZRFjvorEzYWyJvZmZsaW5lLXRpY2tldCIsMSwidGVzdG5ldCIsImYxMWVjNGFmLWMyYjYtNDQ1ZC05NDU4LWU2OTM2NGI5ZTYxMSIsIjMzOTEwNGY5LWMxNTMtNDRhMy1hMjE3LTRiNzM1NDU1YzA2YiIsIjE3MjcyMmRjN2RkMzM4NDIzYTc5YjA2YzJmMTE2MzcxY2NiOWY0ODgxMGIyNGEyNWM1MDgwZWE3YWRmMzEyZDciLDAsImFmMGFlNDJhLWE2YWMtNGJjOC1iOTMyLTcyNGI4MGNjYjk0NSJddQAAAAABAA=="
+ },
+ "kind": "ticketsv-handoff-ticket",
+ "event": {
+  "date": "2026-11-11",
+  "name": "BSV in Nigeria",
+  "time": "12:00",
+  "venue": "National theater",
+  "address": "National theater, costain lagos",
+  "timezone": "Africa/Lagos",
+  "description": "This is an event that is hosted to introduce BSV blockchain to the nigerian community"
+ },
+ "holder": "02b627a170097a9e7d74621fdfa7367ef3bf42b7f78130e3b09b665fedf826c45a",
+ "origin": "https://ticketsv.vercel.app",
+ "request": {
+  "kind": "ticketsv-handoff-request",
+  "request": {
+   "kind": "ticket-request",
+   "network": "testnet",
+   "version": 1,
+   "recipient": {
+    "keyID": "af0ae42a-a6ac-4bc8-b932-724b80ccb945",
+    "publicKey": "0220036a3387c1b093d18e02adf7b367c6fdbf5429faebfde94e11ccf651163be8",
+    "protocolID": [
+     2,
+     "counterfoil ticket receiving"
+    ],
+    "counterparty": "self"
+   },
+   "requestId": "af0ae42a-a6ac-4bc8-b932-724b80ccb945"
+  },
+  "version": 1,
+  "invitation": {
+   "kind": "ticketsv-handoff-invitation",
+   "event": {
+    "date": "2026-11-11",
+    "name": "BSV in Nigeria",
+    "time": "12:00",
+    "venue": "National theater",
+    "address": "National theater, costain lagos",
+    "timezone": "Africa/Lagos",
+    "description": "This is an event that is hosted to introduce BSV blockchain to the nigerian community"
+   },
+   "origin": "https://ticketsv.vercel.app",
+   "source": {
+    "txid": "172722dc7dd338423a79b06c2f116371ccb9f48810b24a25c5080ea7adf312d7",
+    "index": 0
+   },
+   "eventId": "f11ec4af-c2b6-445d-9458-e69364b9e611",
+   "network": "testnet",
+   "version": 1,
+   "ticketId": "339104f9-c153-44a3-a217-4b735455c06b",
+   "trustedVenue": "024818ee4e8ecc2dbc2d11383742b83a58d20f405f9f307bebd1adaae203abcf12",
+   "requiredHeight": 1767684
+  },
+  "keySignature": "MEUCIQCSf5KIr+gaV45HzYZSYmmwWdvGGxzBlGzjk08wPtbBdQIgUsjuDEWaaez/F6Rx8xdl4fV+s9u50Wms53u5OtTVz64=",
+  "identitySignature": "MEQCIEEZbnf7RcJqckJpb2NNqlXP/fpqyUVlyJvKhtnmFRqNAiANBtFjn3FTIc8sTHxQzDaVCe9049SFfZn+DtH9YERuHw==",
+  "recipientIdentity": "02b627a170097a9e7d74621fdfa7367ef3bf42b7f78130e3b09b665fedf826c45a"
+ },
+ "savedAt": "2026-11-11T11:27:54.200Z",
+ "version": 1,
+ "trustedVenue": "024818ee4e8ecc2dbc2d11383742b83a58d20f405f9f307bebd1adaae203abcf12",
+ "issuanceEvidence": {
+  "id": "339104f9-c153-44a3-a217-4b735455c06b",
+  "pkg": {
+   "kind": "ticket-package",
+   "current": {
+    "txid": "172722dc7dd338423a79b06c2f116371ccb9f48810b24a25c5080ea7adf312d7",
+    "index": 0
+   },
+   "network": "testnet",
+   "request": {
+    "kind": "ticket-request",
+    "network": "testnet",
+    "version": 1,
+    "recipient": {
+     "keyID": "54365ebc-a9da-4396-823a-4cd8dc6faafc",
+     "publicKey": "029d8a30c901baa46bae11a9381cde08b0e40857c97a24b46b3f068a0a6c75b773",
+     "protocolID": [
+      2,
+      "counterfoil ticket receiving"
+     ],
+     "counterparty": "self"
+    },
+    "requestId": "54365ebc-a9da-4396-823a-4cd8dc6faafc"
+   },
+   "version": 1,
+   "issuance": {
+    "origin": {
+     "txid": "172722dc7dd338423a79b06c2f116371ccb9f48810b24a25c5080ea7adf312d7",
+     "index": 0
+    },
+    "eventId": "f11ec4af-c2b6-445d-9458-e69364b9e611",
+    "ticketId": "339104f9-c153-44a3-a217-4b735455c06b",
+    "signingKey": {
+     "keyID": "172722dc7dd338423a79b06c2f116371ccb9f48810b24a25c5080ea7adf312d7.0",
+     "publicKey": "02a04e7904ff4f6665e0488fa5ff523db0c5dea201bae577a15800dcabc3c2bd53",
+     "protocolID": [
+      2,
+      "counterfoil ticket issuance"
+     ],
+     "counterparty": "anyone"
+    },
+    "issuerIdentity": "024818ee4e8ecc2dbc2d11383742b83a58d20f405f9f307bebd1adaae203abcf12",
+    "signatureBase64": "MEQCIFr8vrJHJ/HXkmzcfFdZ34Eo7C7WM0/enB5GNlhGgh9FAiAE358VtJ0h269YcJfQgS6OYr6aTplDkcEE5+mIx4M7ow==",
+    "signedBytesBase64": "WyJvZmZsaW5lLXRpY2tldC1pc3N1YW5jZSIsMSwidGVzdG5ldCIsImYxMWVjNGFmLWMyYjYtNDQ1ZC05NDU4LWU2OTM2NGI5ZTYxMSIsIjMzOTEwNGY5LWMxNTMtNDRhMy1hMjE3LTRiNzM1NDU1YzA2YiIsIjE3MjcyMmRjN2RkMzM4NDIzYTc5YjA2YzJmMTE2MzcxY2NiOWY0ODgxMGIyNGEyNWM1MDgwZWE3YWRmMzEyZDciLDBd"
+   },
+   "lineageRawTxs": [
+    "0100000001481a845ae978f2e0892e797b92c3d9e952def892084cc71dcdb5ed03bcbee1ea000000006b483045022100f4e436f29f77d6319c2f4c517a14b42f27c2d983d2f0f41ec59f83be5d96230002204305ba53b9ebcbf70c619c7dc006180c9e86930fdda3f41ca2c20b291277d6314121035d5e01ffe3f025913c7e8e22f872cae06d78ae1e9b05c175bd75e87c53de2373ffffffff020100000000000000c321029d8a30c901baa46bae11a9381cde08b0e40857c97a24b46b3f068a0a6c75b773ac4c9d5b226f66666c696e652d7469636b6574222c312c22746573746e6574222c2266313165633461662d633262362d343435642d393435382d653639333634623965363131222c2233333931303466392d633135332d343461332d613231372d346237333534353563303662222c6e756c6c2c6e756c6c2c2235343336356562632d613964612d343339362d383233612d346364386463366661616663225d7538110000000000001976a91438449db3d0048f4220b90cd4f9461e004507932888ac00000000"
+   ],
+   "atomicBeefBase64": "AQEBAdcS862nDgjFJUqyEIj0ucxxYxEvbLB5OkI4033cIicXAQC+7wH+8fgaAAwC/RwIAtcS862nDgjFJUqyEIj0ucxxYxEvbLB5OkI4033cIicX/R0IAigoPJZUE/2e1Xh7DF+1DvyyxAakQ/JBzjgVoNjtQttwAf0PBABjLOfyUxWlJQRoD8vgY2nZ9fxtimXvzVjLvjZOSP5adAH9BgIA9CrE7GYY5Ybey4Opc1LYUmww+5BR+QETafxV7942AY8B/QIBAE6oq9PG33gtjn/j41OIGRREfs99y3xRAj2NpMOa8oMEAYAA/3RsYhOdloZEd1M4xuyvIwVQQ0TAtsf+YOy0l6GimaUBQQCkPAe0oLBFNBiv/GNOXHpgBf91v/WOzbElId/q+JW7HQEhAQERAQEJAQEFAQEDAQEAAM59DKYYBJX+wwfDRbCNtmtetBGxUq7OdwQYTvQ9xA+TAQEAAAABSBqEWul48uCJLnl7ksPZ6VLe+JIITMcdzbXtA7y+4eoAAAAAa0gwRQIhAPTkNvKfd9YxnC9MUXoUtC8nwtmD0vD0HsWfg75dliMAAiBDBbpTuevL9wxhnH3ABhgMnoaTD92j9ByiwgspEnfWMUEhA11eAf/j8CWRPH6OIvhyyuBteK4emwXBdb116HxT3iNz/////wIBAAAAAAAAAMMhAp2KMMkBuqRrrhGpOBzeCLDkCFfJeiS0az8GigpsdbdzrEydWyJvZmZsaW5lLXRpY2tldCIsMSwidGVzdG5ldCIsImYxMWVjNGFmLWMyYjYtNDQ1ZC05NDU4LWU2OTM2NGI5ZTYxMSIsIjMzOTEwNGY5LWMxNTMtNDRhMy1hMjE3LTRiNzM1NDU1YzA2YiIsbnVsbCxudWxsLCI1NDM2NWViYy1hOWRhLTQzOTYtODIzYS00Y2Q4ZGM2ZmFhZmMiXXU4EQAAAAAAABl2qRQ4RJ2z0ASPQiC5DNT5Rh4ARQeTKIisAAAAAAEA"
+  },
+  "kind": "ticketsv-attendee-offline",
+  "event": {
+   "date": "2026-11-11",
+   "name": "BSV in Nigeria",
+   "time": "12:00",
+   "venue": "National theater",
+   "address": "National theater, costain lagos",
+   "timezone": "Africa/Lagos",
+   "description": "This is an event that is hosted to introduce BSV blockchain to the nigerian community"
+  },
+  "proof": {
+   "venue": "024818ee4e8ecc2dbc2d11383742b83a58d20f405f9f307bebd1adaae203abcf12",
+   "origin": "https://ticketsv.vercel.app",
+   "eventId": "f11ec4af-c2b6-445d-9458-e69364b9e611",
+   "request": {
+    "kind": "ticket-request",
+    "network": "testnet",
+    "version": 1,
+    "recipient": {
+     "keyID": "54365ebc-a9da-4396-823a-4cd8dc6faafc",
+     "publicKey": "029d8a30c901baa46bae11a9381cde08b0e40857c97a24b46b3f068a0a6c75b773",
+     "protocolID": [
+      2,
+      "counterfoil ticket receiving"
+     ],
+     "counterparty": "self"
+    },
+    "requestId": "54365ebc-a9da-4396-823a-4cd8dc6faafc"
+   },
+   "attendee": "02828e341092c4a01d8b069b02fba9afc66092f4da2ddb14f4e101976675541d58",
+   "revision": 1,
+   "signature": "MEQCIBTZ74IrWQKVi0VeAq5BLldVNCjlHo6k1qLSn8xt0J/hAiBpAHtn5OOWhalrpkWaMhG2WHbD2uGVbZV1mTTVe21S/A=="
+  },
+  "origin": "https://ticketsv.vercel.app",
+  "eventId": "f11ec4af-c2b6-445d-9458-e69364b9e611",
+  "savedAt": "2026-11-09T14:05:31.868Z",
+  "version": 1,
+  "attendee": "02828e341092c4a01d8b069b02fba9afc66092f4da2ddb14f4e101976675541d58",
+  "trustedVenue": "024818ee4e8ecc2dbc2d11383742b83a58d20f405f9f307bebd1adaae203abcf12",
+  "eventRevision": 1
+ }
+}

@@ -54,6 +54,23 @@
 .saved-library .issuance-review { border: 1px solid #e1e4d8; border-radius: 19px; background: #fffefa; padding: 28px; }
 .saved-library .issuance-review .btn { border-radius: 10px; font: 600 12px/1.5 Arial, sans-serif; letter-spacing: 0; text-transform: none; }
 .saved-library :is(a, button, summary):focus-visible { outline: 2px solid var(--wine); outline-offset: 4px; }
+/* Offline home: storage, handoffs in progress, statuses, activity and clearing this device. */
+.saved-library-storage { color: #697952; }
+.saved-library-account > h2 { margin: 32px 0 0; font: 600 13px/1.4 Arial, sans-serif; color: #707568; letter-spacing: .02em; }
+.saved-library-account .saved-library-grid { margin-top: 14px; }
+.saved-card-status { display: inline-block; margin: 0 0 14px; padding: 5px 9px; border-radius: 99px; background: #efeddf; color: #4b4f43; font: 600 11px/1.4 Arial, sans-serif; }
+.saved-card-status[data-status='in-wallet'], .saved-card-status[data-status='received'], .saved-card-status[data-status='current'] { background: #f0f4e7; color: #55673d; }
+.saved-card-status[data-status='received-unmined'], .saved-card-status[data-status='sent-waiting'], .saved-card-status[data-status='sent-unpublished'] { background: #f7ecd8; color: #7a5a1e; }
+.saved-library-progress, .saved-library-kept { margin: 28px 0 0; padding: 18px 20px; background: #fffdf6; border: 1px solid #e1e4d8; border-radius: 12px; }
+.saved-library-progress h2, .saved-library-kept h2 { margin: 0 0 10px; font: 600 15px/1.4 Arial, sans-serif; }
+.saved-library-progress ul, .saved-library-kept ul { list-style: none; margin: 0; padding: 0; }
+.saved-library-progress li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 10px 0; border-top: 1px solid #eceee4; font: 13px/1.5 Arial, sans-serif; }
+.saved-library-progress a { display: inline-flex; align-items: center; gap: 6px; color: var(--wine); font-weight: 600; }
+.saved-library-progress a .dashboard-icon { width: 14px; height: 14px; }
+.saved-library-kept { border-color: #e4cfc4; }
+.saved-library-kept li { padding: 6px 0; font: 13px/1.5 Arial, sans-serif; }
+.saved-library-activity { margin-top: 40px; }
+.saved-library-clear { margin-top: 20px; }
 @media (prefers-reduced-motion: no-preference) {
  .saved-library-card { animation: collection-arrive .55s ease both; }
  .saved-library-card { animation-delay: .08s; }

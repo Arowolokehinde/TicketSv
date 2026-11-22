@@ -14,7 +14,7 @@ describe('authentication wallet boundary', () => {
     const controller = new AbortController()
     const wallet = authenticationWallet(new ProtoWallet(PrivateKey.fromRandom()) as WalletInterface, controller.signal)
     controller.abort()
-    await expect(wallet.getPublicKey({ identityKey: true })).rejects.toThrow()
+    await expect(wallet.getPublicKey({ identityKey: true })).rejects.toThrow('This operation was aborted')
   })
 })
 

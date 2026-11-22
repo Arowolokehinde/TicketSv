@@ -1,6 +1,7 @@
 // Developer-only experiment. Loaded on explicit preparation, never by product routes.
 import { Beef, LockingScript, PushDrop, Signature, Transaction } from '@bsv/sdk'
 import type { CreateActionResult, SignActionResult, WalletInterface, WalletProtocol } from '@bsv/sdk'
+import { checkWallet } from './identity.ts'
 
 export const SIGNING_PROTOCOL: WalletProtocol = [2, 'counterfoil signing experiment']
 export type FinalEvidence = { txid: string; atomicBeef: number[]; outputIndex: number }
@@ -13,10 +14,7 @@ export class SigningError extends Error {}
 function fail(message: string): never { throw new SigningError(message) }
 
 async function identityOnTestnet(wallet: WalletInterface, expected?: string): Promise<string> {
-  if ((await wallet.getNetwork({})).network !== 'testnet') fail('Select testnet before this experiment.')
-  const identity = (await wallet.getPublicKey({ identityKey: true })).publicKey
-  if (expected && identity !== expected) fail('The wallet identity changed. Restore the prepared wallet profile.')
-  return identity
+  return checkWallet(wallet, { identity: expected || undefined, messages: { network: 'Select testnet before this experiment.', identity: 'The wallet identity changed. Restore the prepared wallet profile.' }, error: message => new SigningError(message) })
 }
 function readAtomic(bytes: number[] | Uint8Array | undefined, allowMinedSource = false): Transaction {
   if (!bytes?.length || bytes.length > 4 * 1024 * 1024) fail('Missing or oversized Atomic BEEF.')
@@ -129,7 +127,7 @@ export async function prepareSigning(wallet: WalletInterface, runId: string, onR
   const destinationScript = (await template.lock(fields(), SIGNING_PROTOCOL, destinationKeyId, 'self', true, true)).toHex()
   await identityOnTestnet(wallet, identity)
   const response = await wallet.createAction({
-    description: 'Prepare Counterfoil signing experiment',
+    description: 'Prepare TicketSV signing experiment',
     outputs: [{ lockingScript: sourceScript, satoshis: 1, outputDescription: 'Self-owned signing test token',
       basket: 'counterfoil-signing-experiment', customInstructions: JSON.stringify({ protocolID: SIGNING_PROTOCOL, keyID: sourceKeyId, counterparty: 'self', type: 'PushDrop' }) }],
     options: { noSend: true, returnTXIDOnly: false, randomizeOutputs: false },
@@ -145,7 +143,7 @@ export async function transferSigning(wallet: WalletInterface, prepared: Signing
   const parent = await inspectFinal({ tx: prepared.source.atomicBeef, txid: prepared.source.txid }, prepared.sourceScript)
   if (parent.outputIndex !== prepared.source.outputIndex) fail('The prepared output index changed.')
   const response = await wallet.createAction({
-    description: 'Transfer Counterfoil signing test token', inputBEEF: prepared.source.atomicBeef,
+    description: 'Transfer TicketSV signing test token', inputBEEF: prepared.source.atomicBeef,
     inputs: [{ outpoint: `${parent.txid}.${parent.outputIndex}`, inputDescription: 'Prepared self-owned test token', unlockingScriptLength: 73 }],
     outputs: [{ lockingScript: prepared.destinationScript, satoshis: 1, outputDescription: 'Self-owned successor test token', basket: 'counterfoil-signing-experiment',
       customInstructions: JSON.stringify({ protocolID: SIGNING_PROTOCOL, keyID: prepared.destinationKeyId, counterparty: 'self', type: 'PushDrop' }) }],

@@ -19,7 +19,8 @@
 .handoff-workspace .wallet-advanced summary { padding: 0; font: 600 12px/1.6 Arial, sans-serif; color: #6b765b; }
 .handoff-workspace .wallet-advanced > p { font-size: 12px; color: #6b7361; }
 .handoff-workspace .wallet-advanced select { max-width: 460px; }
-.receive-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(260px, 1fr); gap: 24px; align-items: start; }
+/* Receive reads top to bottom: the step list, then the current step. */
+.receive-layout { display: grid; grid-template-columns: minmax(0, 1fr); max-width: 820px; gap: 20px; align-items: start; }
 .handoff-workspace .handoff-panel { min-width: 0; border: 1px solid #e1e4d8; border-radius: 19px; padding: 28px; background: #fffefa; margin: 0 0 24px; box-shadow: 0 4px 16px #353c2304; }
 .receive-layout > .handoff-panel { margin: 0; }
 .handoff-panel-kicker { display: block; font: 600 9px/1.5 Arial, sans-serif; letter-spacing: 1.2px; color: #7a8469; }
@@ -37,12 +38,6 @@
 .handoff-workspace input[type=file]::file-selector-button { padding: 9px 12px; border: 1px solid #d7e0c3; border-radius: 8px; background: #fffefa; color: #576b41; margin-right: 10px; cursor: pointer; font: 600 11px Arial, sans-serif; }
 .handoff-file-hint { display: block; color: #68745a; font: 10px/1.6 Arial, sans-serif; margin-top: 8px; }
 .handoff-workspace .handoff-exchange { margin: 20px 0; }
-.receive-resume-icon { display: grid; place-items: center; width: 39px; height: 39px; border: 1px solid #e0e7d0; border-radius: 11px; background: #f0f4e5; color: #839665; margin-bottom: 18px; }
-.receive-resume-icon .dashboard-icon { width: 19px; height: 19px; }
-.receive-no-requests { display: flex; align-items: flex-start; gap: 10px; margin-top: 18px; padding: 14px; border: 1px dashed #dce3ce; border-radius: 10px; background: #f8f9f2; }
-.receive-no-requests > .dashboard-icon { width: 20px; height: 20px; color: #96a480; }
-.receive-no-requests p { margin: 0; color: #68735b; font-size: 11px; }
-.receive-continuation { grid-column: 1 / -1; }
 .handoff-workspace .handoff-review { margin: 22px 0 0; padding: 20px; border: 1px solid #e3dfcd; border-left: 3px solid #b1be81; border-radius: 12px; background: #f5f4e9; }
 .handoff-workspace .handoff-review p { font-size: 12px; }
 .handoff-workspace .handoff-consent { font-size: 12px; color: #646b59; }
@@ -51,11 +46,6 @@
 .handoff-limits summary { cursor: pointer; font: 12px/1.6 Arial, sans-serif; }
 .handoff-limits p { font-size: 12px; max-width: 760px; }
 .handoff-workspace :is(a, button, input, select, summary):focus-visible { outline: 2px solid var(--wine); outline-offset: 4px; }
-@media (max-width: 1100px) {
- .receive-layout { grid-template-columns: minmax(0, 1fr); }
- .receive-resume { display: block; }
- .receive-continuation { grid-column: auto; }
-}
 @media (max-width: 800px) {
  .handoff-workspace .content.handoff-page { padding-top: 26px; }
  .handoff-workspace .handoff-panel { padding: 24px; }
@@ -89,3 +79,11 @@
 .handoff-workspace .handoff-page .handoff-file > .handoff-file-title { margin: 0 0 16px; }
 .handoff-file-choose { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .handoff-file-name { color: #707b62; font: 12px/1.5 Arial,sans-serif; overflow-wrap: anywhere; min-width: 0; }
+.handoff-tab-ready { margin-left: 8px; padding: 2px 7px; border-radius: 999px; background: #e3ecd0; color: #4f6b1f; font: 600 10px/1.4 Arial, sans-serif; font-style: normal; letter-spacing: .3px; }
+.handoff-workspace .handoff-next { margin-top: 22px; padding: 16px 18px; border: 1px solid #dce4bf; border-radius: 12px; background: #f1f5e6; }
+.handoff-workspace .handoff-next p { margin: 0 0 12px; font-size: 13px; color: #4f5a41; }
+.handoff-workspace .handoff-next { margin: 0 0 20px; }
+.handoff-workspace .handoff-next .handoff-next-done { margin: 0 0 6px; color: #5d7a2c; font-size: 12px; font-weight: 600; }
+.handoff-workspace .handoff-next .actions { margin: 0; }
+.handoff-workspace .handoff-file-instead { margin-top: 14px; }
+.handoff-workspace .handoff-file-instead summary { cursor: pointer; font: 600 12px/1.6 Arial, sans-serif; color: #6b765b; }

@@ -6,8 +6,16 @@ const WOC = 'https://api.whatsonchain.com/v1/bsv/test/block/headers/'
 const CT = 'https://chaintracks-testnet-us-1.bsvb.tech/v2/'
 const resources=new WeakMap<typeof fetch,ReturnType<typeof createHeaderResourceCache>>()
 export class HeaderConflict extends Error {}
+// WhatsOnChain answers bursts with 429. Retrying the one refused request keeps a
+// round alive; any other failure still ends it, and both sources must still agree.
+const RETRY_WAITS = [1000, 2000, 4000]
+const retryAfter = (response: Response, fallback: number) => {
+ const seconds = Number(response.headers.get('retry-after'))
+ return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds * 1000, 5000) : fallback
+}
 export type HeaderResolution = {height:number; rejectedHash:string; acceptedHash:string; childHash:string}
-export async function collectHeaderRange(start: number, count: number, signal: AbortSignal, get: typeof fetch = fetch, onResolution?:(resolution:HeaderResolution)=>void): Promise<HeaderRecord[]> {
+export async function collectHeaderRange(start: number, count: number, signal: AbortSignal, get: typeof fetch = fetch, onResolution?:(resolution:HeaderResolution)=>void,
+ pause: (ms: number, signal: AbortSignal) => Promise<unknown> = (ms, signal) => delay(ms, undefined, { signal })): Promise<HeaderRecord[]> {
  checkHeaderRange(start, count); signal.throwIfAborted()
  const cache=resources.get(get)??createHeaderResourceCache();resources.set(get,cache)
  const operation = new AbortController()
@@ -18,7 +26,14 @@ export async function collectHeaderRange(start: number, count: number, signal: A
   const request = (async () => {
   timeout.throwIfAborted()
   const ttl=url===CT+'network'?300_000:url===WOC+'resources'?30_000:url.startsWith(WOC)&&url.endsWith('_headers.bin')?300_000:0
-  return cache.read(url,ttl,timeout,async()=>boundedBytes(await get(url, { signal: timeout, redirect: 'error', credentials: 'omit', cache: 'no-store' }), limit, timeout))
+  return cache.read(url,ttl,timeout,async()=>{
+   for (let attempt = 0; ; attempt++) {
+    const response = await get(url, { signal: timeout, redirect: 'error', credentials: 'omit', cache: 'no-store' })
+    if (response.status !== 429 || attempt === RETRY_WAITS.length) return boundedBytes(response, limit, timeout)
+    void response.body?.cancel().catch(() => {})
+    await pause(retryAfter(response, RETRY_WAITS[attempt]), timeout)
+   }
+  })
   })()
   pending.push(request); return request
  }
@@ -63,7 +78,7 @@ export async function collectHeaderRange(start: number, count: number, signal: A
    try { header = parseProviderHeader(value, 'whatsonchain', next) }
    catch (e) { throw new HeaderConflict((e as Error).message) }
    output.set(Uint8Array.from(Buffer.from(header.hex, 'hex')), (next-start)*80)
-   if (next + 1 < start + count) await delay(350, undefined, {signal:timeout})
+   if (next + 1 < start + count) await pause(1000, timeout)
   }
   return output
  }

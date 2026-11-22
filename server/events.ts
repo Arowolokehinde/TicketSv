@@ -22,12 +22,16 @@ export function eventInput(value: unknown): Record<string, unknown> {
   try { return { ...validateEventDetails({ ...input, image } as EventDetails), image: wire } }
   catch (error) { throw new ApiError(400, (error as Error).message) }
 }
+// Read alongside an organiser_events row: whether it is on the public Events page and which revision, and how many tickets are issued.
+export const statusColumns =
+  "(SELECT jsonb_build_object('published', p.published, 'revision', p.revision) FROM event_publications p WHERE p.event_id=organiser_events.id) AS publication, " +
+  "(SELECT count(*)::int FROM venue_issuances v WHERE v.event_id=organiser_events.id AND v.status='complete') AS issued"
 export function eventRecord(row: Record<string, any>) {
-  return { ...row.details, id: row.id, status: 'draft', revision: row.revision, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString() }
+  return { ...row.details, id: row.id, status: 'draft', revision: row.revision, publication: row.publication ?? { published: false, revision: null }, issued: row.issued ?? 0, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString() }
 }
 export async function updateEvent(pool: Pool, owner: string, id: string, revision: unknown, details: Record<string, unknown>) {
   if (!Number.isSafeInteger(revision) || Number(revision) < 1) throw new ApiError(400, 'Invalid event revision.')
-  const result = await pool.query('UPDATE organiser_events SET details=$1, revision=revision+1, updated_at=now() WHERE id=$2 AND owner_key=$3 AND revision=$4 RETURNING *', [details, id, owner, revision])
+  const result = await pool.query(`UPDATE organiser_events SET details=$1, revision=revision+1, updated_at=now() WHERE id=$2 AND owner_key=$3 AND revision=$4 RETURNING *, ${statusColumns}`, [details, id, owner, revision])
   if (result.rowCount) return eventRecord(result.rows[0])
   const exists = await pool.query('SELECT id FROM organiser_events WHERE id=$1 AND owner_key=$2', [id, owner])
   throw new ApiError(exists.rowCount ? 409 : 404, exists.rowCount ? 'This event changed in another tab. Copy your changes and reload before editing again.' : 'Event not found.')

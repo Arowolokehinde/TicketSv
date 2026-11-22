@@ -24,13 +24,13 @@ it('restores only matching device mining evidence without treating it as a verdi
  expect((await verifyAttendeeEvidence(attendeeEvidence(restored, identity, origin), origin)).verdict).toBe('incomplete')
  expect(restoreAttendeeMiningEvidence(record, saved, identity, origin)).toBe(record)
  const other = await attendeeOfflineFixture()
- expect(() => restoreAttendeeMiningEvidence(original, attendeeEvidence(other.record, other.identity, origin), identity, origin)).toThrow()
- expect(() => restoreAttendeeMiningEvidence(original, saved, record.owner, origin)).toThrow()
- expect(() => restoreAttendeeMiningEvidence(original, saved, identity, 'https://elsewhere.test')).toThrow()
+ expect(() => restoreAttendeeMiningEvidence(original, attendeeEvidence(other.record, other.identity, origin), identity, origin)).toThrow('Saved mining evidence does not match this delivery.')
+ expect(() => restoreAttendeeMiningEvidence(original, saved, record.owner, origin)).toThrow('Receiving request context changed.')
+ expect(() => restoreAttendeeMiningEvidence(original, saved, identity, 'https://elsewhere.test')).toThrow('Receiving request context changed.')
  const tampered = structuredClone(saved); tampered.pkg.issuance.signatureBase64 = 'AAAA'
- expect(() => restoreAttendeeMiningEvidence(original, tampered, identity, origin)).toThrow()
+ expect(() => restoreAttendeeMiningEvidence(original, tampered, identity, origin)).toThrow('Saved mining evidence does not match this delivery.')
  const wrongBytes = structuredClone(saved); wrongBytes.pkg.atomicBeefBase64 = other.record.pkg!.atomicBeefBase64
- expect(() => restoreAttendeeMiningEvidence(original, wrongBytes, identity, origin)).toThrow()
+ expect(() => restoreAttendeeMiningEvidence(original, wrongBytes, identity, origin)).toThrow('Incomplete or invalid Atomic BEEF')
 })
 it('binds a distinct attendee to the saved delivery and verifies locally', async () => {
  const { record, identity } = await attendeeOfflineFixture()
@@ -42,8 +42,8 @@ it('binds a distinct attendee to the saved delivery and verifies locally', async
 })
 it('rejects a different account, origin, ticket, event or recipient before saving', async () => {
  const { record, identity } = await attendeeOfflineFixture()
- expect(() => attendeeEvidence(record, record.owner, origin)).toThrow()
- expect(() => attendeeEvidence(record, identity, 'https://elsewhere.test')).toThrow()
+ expect(() => attendeeEvidence(record, record.owner, origin)).toThrow('Receiving request context changed.')
+ expect(() => attendeeEvidence(record, identity, 'https://elsewhere.test')).toThrow('Receiving request context changed.')
  for (const patch of [{ id: crypto.randomUUID() }, { eventId: crypto.randomUUID() }, { eventRevision: 3 }, { txid: 'ab'.repeat(32) }, { request: { ...record.request, requestId: crypto.randomUUID() } }]) {
   expect(() => attendeeEvidence({ ...record, ...patch }, identity, origin)).toThrow()
  }
@@ -51,8 +51,8 @@ it('rejects a different account, origin, ticket, event or recipient before savin
 it('rejects changed proof signatures and corrupt saved records', async () => {
  const { record, identity } = await attendeeOfflineFixture()
  const evidence = attendeeEvidence(record, identity, origin)
- expect(() => readAttendeeEvidence({ ...evidence, proof: { ...evidence.proof, signature: 'AAAA' } }, origin)).toThrow()
- expect(() => readAttendeeEvidence({ ...evidence, version: 2 }, origin)).toThrow()
+ expect(() => readAttendeeEvidence({ ...evidence, proof: { ...evidence.proof, signature: 'AAAA' } }, origin)).toThrow('Signature DER must start with 0x30')
+ expect(() => readAttendeeEvidence({ ...evidence, version: 2 }, origin)).toThrow('Invalid saved ticket context.')
  const bad = structuredClone(evidence); bad.pkg.issuance.signatureBase64 = 'AAAA'
  expect((await verifyAttendeeEvidence(bad, origin, snapshot)).verdict).toBe('rejected')
 })
@@ -60,7 +60,7 @@ it('missing headers stay incomplete without fetching and cannot be saved as read
  const { record, identity } = await attendeeOfflineFixture(), fetch = vi.spyOn(globalThis, 'fetch')
  try {
   const report = await verifyAttendeeEvidence(attendeeEvidence(record, identity, origin), origin, undefined)
-  expect(report.verdict).toBe('incomplete'); expect(() => requireMinedEvidence(report)).toThrow(); expect(fetch).not.toHaveBeenCalled()
+  expect(report.verdict).toBe('incomplete'); expect(() => requireMinedEvidence(report)).toThrow('Ticket evidence is not fully verified. Verify the ticket and resolve any failed or missing checks before saving.'); expect(fetch).not.toHaveBeenCalled()
  } finally { fetch.mockRestore() }
 })
 it('unmined evidence may verify but cannot qualify for offline preparation', async () => {

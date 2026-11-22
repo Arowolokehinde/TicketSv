@@ -45,7 +45,7 @@ it('uses noSend for issuance and transfer and signs the finalized origin for pub
 })
 it('rejects a changed wallet identity before any createAction',async()=>{
  const wallet=syntheticSigningWallet(),create=vi.spyOn(wallet,'createAction')
- await expect(issueTicketExperiment(wallet,'02'+'11'.repeat(32),'event','ticket','run')).rejects.toThrow()
+ await expect(issueTicketExperiment(wallet,'02'+'11'.repeat(32),'event','ticket','run')).rejects.toThrow('Invalid ticket package or receiving request')
  expect(create).not.toHaveBeenCalled()
 })
 it('preserves a returned action reference and never retries a failed attestation',async()=>{
@@ -61,7 +61,7 @@ it('refuses a transfer draft with an altered output before signing it',async()=>
  const create=wallet.createAction.bind(wallet)
  vi.spyOn(wallet,'createAction').mockImplementation(a=>create({...a,outputs:a.outputs?.map(o=>({...o,satoshis:2}))}))
  const sign=vi.spyOn(wallet,'signAction')
- await expect(transferTicketExperiment(wallet,prep)).rejects.toThrow()
+ await expect(transferTicketExperiment(wallet,prep)).rejects.toThrow('Draft changed the expected ticket output')
  expect(sign).not.toHaveBeenCalled()
 })
 it('refuses a second ticket successor with a different receiving key before requesting a signature',async()=>{
@@ -70,7 +70,7 @@ it('refuses a second ticket successor with a different receiving key before requ
  const create=wallet.createAction.bind(wallet)
  vi.spyOn(wallet,'createAction').mockImplementation(a=>create({...a,outputs:[...a.outputs!,{lockingScript:ticketScript('event','ticket',prep.pkg.issuance.origin,prep.source).toHex(),satoshis:1,outputDescription:'Duplicate successor'}]}))
  const sign=vi.spyOn(wallet,'createSignature'),finalize=vi.spyOn(wallet,'signAction')
- await expect(transferTicketExperiment(wallet,prep)).rejects.toThrow()
+ await expect(transferTicketExperiment(wallet,prep)).rejects.toThrow('Draft contains duplicate ticket successors')
  expect(sign).not.toHaveBeenCalled();expect(finalize).not.toHaveBeenCalled()
 })
 it('rejects a validly signed final transaction whose outputs differ from the approved draft',async()=>{
@@ -106,7 +106,7 @@ it('restores transfer preparation only from wallet-confirmed ticket and managed 
 })
 it('rejects a substituted buyer key and a request that keeps the original holder',async()=>{
  const {wallet,identity,prep}=await recoveryFixture()
- await expect(restoreTicketPreparation(wallet,prep.pkg,{...prep.destination,recipient:prep.source.recipient},identity)).rejects.toThrow()
+ await expect(restoreTicketPreparation(wallet,prep.pkg,{...prep.destination,recipient:prep.source.recipient},identity)).rejects.toThrow('Invalid ticket package or receiving request')
  await expect(restoreTicketPreparation(wallet,prep.pkg,prep.source,identity)).rejects.toThrow(/different/i)
 })
 it.each(['ticket absent','change absent','unspendable','wrong script','wrong value','ticket as change','duplicate','truncated'])('refuses recovery with %s wallet evidence',async mode=>{

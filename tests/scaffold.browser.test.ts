@@ -23,7 +23,10 @@ test('harness is honest, reloadable and inert without a wallet installed', async
     await expect(page.getByText(/^(Passed|Connected|Ready offline)$/)).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Connect wallet', exact: true })).toBeEnabled()
     await page.waitForTimeout(1000)
-    expect(await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length)).toBe(0)
+    // The only worker is TicketSV's own offline app cache, which never contacts a wallet.
+    expect(
+      await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).map(r => r.active?.scriptURL ?? r.installing?.scriptURL)),
+    ).toEqual([origin + '/ticketsv-offline-worker.js'])
     expect(await page.evaluate(() => ['wallet', 'WalletClient', 'bsv', 'bsvWallet'].filter(key => key in window))).toEqual([])
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)
   }
@@ -36,6 +39,6 @@ test('unknown paths recover to the actual website', async ({ page }) => {
   await page.goto('/not-a-page')
   await expect(page.getByRole('heading', { name: 'Page not found.' })).toBeVisible()
   await page.getByRole('link', { name: 'Back to home' }).click()
-  await expect(page.locator('#root .landing h1')).toContainText('Your ticket.')
+  await expect(page.locator('#root .landing h1')).toContainText('Your next event.')
   await expect(page).toHaveURL(/\/$/)
 })

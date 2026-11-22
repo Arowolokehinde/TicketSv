@@ -25,7 +25,8 @@ test('homepage is the native website with working journey and navigation', async
 test('workspaces have separate navigation and survive direct reloads', async ({ page }) => {
   for (const [path, title, nav] of [
     ['/tickets', 'Good times. Great memories.', 'Ticket holder navigation'],
-    ['/venue', 'Your events.', 'Ticket holder navigation'],
+    ['/venue', 'Create event', 'Ticket holder navigation'],
+    ['/venue/my-events', 'My events', 'Ticket holder navigation'],
     ['/scanner', 'Scan a ticket.', 'Scanner navigation'],
   ]) {
     await page.goto(path!)
@@ -40,22 +41,11 @@ test('workspaces have separate navigation and survive direct reloads', async ({ 
   }
 })
 
-test('sample collection stays distinct from real acceptance and unsupported operations', async ({ page }) => {
-  await page.goto('/tickets')
-  await expect(page.getByText('Sample tickets — no real tickets saved.', { exact: true })).toBeVisible()
-  await page.getByRole('link', { name: 'View sample ticket & evidence' }).click()
-  await expect(page.getByRole('heading', { name: 'Harbour Nights.', exact: true, level: 1 })).toBeVisible()
-  await expect(page.getByText('Sample evidence — not verified on this device.', { exact: true })).toBeVisible()
-  await page.goto('/tickets')
-  await page.getByRole('button', { name: 'Hide sample tickets' }).click()
-  await expect(page.getByRole('heading', { name: 'No tickets saved yet.' })).toBeVisible()
-  await page.getByRole('link', { name: 'Receive your first ticket' }).click()
-  await expect(page.getByRole('button', { name: 'Create receiving request' })).toBeDisabled()
-  await expect(page.getByText('No receiving request has been created.', { exact: true })).toBeVisible()
-  await page.goto('/venue')
-  await expect(page.getByRole('button', { name: 'Create event', exact: true })).toBeEnabled()
-  await page.goto('/scanner')
-  await expect(page.getByRole('button', { name: 'Scan ticket QR', exact: true })).toBeDisabled()
+test('removed placeholder pages send old links to the real flows', async ({ page }) => {
+  for (const [from, to] of [['/tickets/sample', /\/tickets$/], ['/tickets/receive', /\/offline\/handoff\?step=receive$/], ['/tickets/transfer', /\/offline\/handoff\?step=prepare$/], ['/tickets/prepare', /\/tickets$/], ['/venue/prepare', /\/venue$/]] as const) {
+    await page.goto(from)
+    await expect(page).toHaveURL(to)
+  }
 })
 
 test('product routes are responsive and make no external or wallet requests', async ({ page, baseURL }) => {

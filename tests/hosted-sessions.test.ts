@@ -17,6 +17,17 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('shared hosted authentication se
   expect(await manager().getSession('identity')).toMatchObject({...session(),isAuthenticated:true,certificatesRequired:true,certificatesValidated:true})
   expect(await a.hasSession('session')).toBe(true)
  })
+ it('locks writes per session and identity rather than globally',async()=>{
+  const held=await pool.connect(),settled=(promise:Promise<unknown>)=>Promise.race([promise.then(()=>true),new Promise(r=>setTimeout(()=>r(false),400))])
+  try{
+   await held.query('BEGIN');await held.query('SELECT pg_advisory_xact_lock(84723521)');await held.query("SELECT pg_advisory_xact_lock(hashtextextended('session:busy',84723521))")
+   expect(await settled(manager().addSession(session('free')))).toBe(true)
+   expect(await settled(manager().claimInitialRequestNonce('identity','free'))).toBe(true)
+   const blocked=manager().addSession(session('busy'))
+   expect(await settled(blocked)).toBe(false)
+   await held.query('ROLLBACK');await blocked
+  }finally{await held.query('ROLLBACK').catch(()=>{});held.release()}
+ })
  it('claims a signed nonce exactly once across concurrent instances and retains claims on session update',async()=>{
   await manager().addSession(session())
   const results=await Promise.all(Array.from({length:8},()=>manager().claimMessageNonce('session','message')))

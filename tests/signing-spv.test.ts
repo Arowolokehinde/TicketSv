@@ -32,7 +32,7 @@ it('rejects an unsigned spend even when its ancestor has a valid Merkle anchor',
  const parent=Transaction.fromAtomicBEEF(fixture.final.atomicBeef)
  const tx=new Transaction(1,[{sourceTransaction:parent,sourceOutputIndex:0,unlockingScript:new UnlockingScript()}],parent.outputs)
  const bad={...fixture,final:{txid:tx.id('hex'),atomicBeef:tx.toAtomicBEEF(),outputIndex:0}}
- await expect(verifySigningEvidence(readSigningEvidence(JSON.stringify(bad)),makeSnapshot(headers))).rejects.toThrow()
+ await expect(verifySigningEvidence(readSigningEvidence(JSON.stringify(bad)),makeSnapshot(headers))).rejects.toThrow('Script evaluation error: OP_DUP requires at least one item to be on the stack.')
 })
 
 it('derives the additional local depth needed by a coinbase anchor',()=>{

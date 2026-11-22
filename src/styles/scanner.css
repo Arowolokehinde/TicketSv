@@ -8,3 +8,10 @@
 @media(prefers-reduced-motion:no-preference){.scanner-result{animation:scanner-reveal .22s ease-out}@keyframes scanner-reveal{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}}
 .scanner-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}.scanner-nav a{padding:9px 15px;border-radius:10px;color:#677259;text-decoration:none;font-size:13px;font-weight:600}.scanner-nav a[aria-current=page]{background:#e5edcf;color:#465b2e}
 .scanner-consent input{padding:0;margin:3px 0 0}
+.scanner-door { margin-top: 16px; }
+.scanner-door p { margin: 0 0 6px; }
+.scanner-admissions { margin-top: 20px; }
+.scanner-admissions ul { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 8px; }
+.scanner-admissions li { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; font-size: 14px; }
+.scanner-admissions li small { flex-basis: 100%; color: #646b59; }
+.scanner-admissions li[data-state='lost'] strong { color: var(--wine); }

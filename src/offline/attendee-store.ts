@@ -1,4 +1,5 @@
 import { loadSnapshot } from '../headers/store.ts'
+import { keepOfflineData, storageError } from './persist.ts'
 import { readAttendeeEvidence, verifyAttendeeEvidence, requireMinedEvidence, type AttendeeEvidence } from './attendee-evidence.ts'
 const DB = 'ticketsv-attendee-offline-v1', STORE = 'tickets'
 export type SavedTicket = { key: IDBValidKey; id: string; token: string; evidence?: AttendeeEvidence; error?: string }
@@ -7,7 +8,7 @@ function open(): Promise<IDBDatabase> {
   const request = indexedDB.open(DB, 1)
   request.onupgradeneeded = () => request.result.createObjectStore(STORE)
   request.onsuccess = () => { request.result.onversionchange = () => request.result.close(); resolve(request.result) }
-  request.onerror = request.onblocked = () => reject(Error('Saved ticket storage is unavailable.'))
+  request.onerror = request.onblocked = () => reject(Error('Saved ticket storage is unavailable. A private window may block saved data.'))
  })
 }
 // IndexedDB can contain non-JSON corruption. Encode a typed object graph so
@@ -55,7 +56,7 @@ async function replace(key: IDBValidKey, expected: string, next: AttendeeEvidenc
   const abort = () => { failure = signal?.reason ?? Error('Save cancelled.'); try { tx.abort() } catch { /* already committed */ } }
   const cleanup = () => { signal?.removeEventListener('abort', abort); db.close() }
   tx.oncomplete = () => { cleanup(); resolve() }
-  tx.onabort = tx.onerror = () => { cleanup(); reject(failure ?? Error('Could not update saved tickets. The previous copy was retained.')) }
+  tx.onabort = tx.onerror = () => { cleanup(); reject(failure ?? storageError(tx.error, 'Could not update saved tickets. The previous copy was retained.')) }
   signal?.addEventListener('abort', abort, { once: true })
   const request = store.get(key)
   request.onsuccess = () => {
@@ -74,6 +75,7 @@ export async function saveAttendeeTicket(value: unknown, origin: string, signal:
  requireMinedEvidence(await verifyAttendeeEvidence(next, origin, await loadSnapshot()))
  signal.throwIfAborted(); guard()
  await replace(key, previous?.token ?? token(undefined), next, signal, guard)
+ void keepOfflineData()
  return next
 }
 export function removeSavedTicket(row: SavedTicket): Promise<void> { return replace(row.key, row.token, undefined) }

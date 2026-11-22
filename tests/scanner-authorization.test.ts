@@ -10,11 +10,11 @@ async function fixture(){
 it('accepts the signed scanner permit only for its origin and server identity',async()=>{
  const f=await fixture()
  expect(verifyScannerPermit(f.permit,{origin:f.permit.origin,serverIdentity:f.server,now:f.now}).identityKey).toBe(f.permit.identityKey)
- expect(()=>verifyScannerPermit(f.permit,{origin:'https://another.example',serverIdentity:f.server,now:f.now})).toThrow()
- expect(()=>verifyScannerPermit(f.permit,{origin:f.permit.origin,serverIdentity:f.permit.identityKey,now:f.now})).toThrow()
+ expect(()=>verifyScannerPermit(f.permit,{origin:'https://another.example',serverIdentity:f.server,now:f.now})).toThrow('Scanner authorisation expired or belongs to another website. Sign in online and prepare again.')
+ expect(()=>verifyScannerPermit(f.permit,{origin:f.permit.origin,serverIdentity:f.permit.identityKey,now:f.now})).toThrow('Scanner authorisation signature is invalid.')
 })
 it('rejects changed, expired and excessively long-lived permits without contacting a service',async()=>{
  const f=await fixture(),context={origin:f.permit.origin,serverIdentity:f.server,now:f.now}
  for(const patch of [{identityKey:f.server},{expiresAt:f.now+9*3600000},{scope:'admin'},{signature:'AAAA'},{issuedAt:f.now+60000}])expect(()=>verifyScannerPermit({...f.permit,...patch},context)).toThrow()
- expect(()=>verifyScannerPermit(f.permit,{...context,now:f.permit.expiresAt})).toThrow()
+ expect(()=>verifyScannerPermit(f.permit,{...context,now:f.permit.expiresAt})).toThrow('Scanner authorisation expired or belongs to another website. Sign in online and prepare again.')
 })

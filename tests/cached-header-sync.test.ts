@@ -30,7 +30,7 @@ it('refuses blocked cache and invalid targets without promoting bytes',async()=>
  const get=vi.fn(async()=>Response.json({...status,state:'blocked'}));vi.stubGlobal('fetch',get)
  await expect(syncCachedHeaders(b.height,undefined,new AbortController().signal)).rejects.toThrow(/review|dispute/i)
  get.mockClear()
- await expect(syncCachedHeaders(Number.MAX_SAFE_INTEGER,undefined,new AbortController().signal)).rejects.toThrow()
+ await expect(syncCachedHeaders(Number.MAX_SAFE_INTEGER,undefined,new AbortController().signal)).rejects.toThrow('Invalid required header height.')
  expect(get).not.toHaveBeenCalled()
 })
 it('cancels a cold cache wait promptly with no provider fallback',async()=>{

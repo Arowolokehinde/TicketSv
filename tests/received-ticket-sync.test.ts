@@ -13,9 +13,9 @@ it('binds archives to the signed recipient and preserves historical origin witho
 })
 it('rejects altered recipient signatures and ticket transaction evidence',async()=>{
  const f=await handoffFixture()
- await expect(validateReceivedArchive({ticket:{...f.ticket,holder:f.source.holder}},f.source.holder)).rejects.toThrow()
- await expect(validateReceivedArchive({ticket:{...f.ticket,pkg:{...f.ticket.pkg,atomicBeefBase64:'AAAA'}}},f.ticket.holder)).rejects.toThrow()
- await expect(validateReceivedArchive({ticket:{...f.ticket,request:{...f.request,identitySignature:'AAAA'}}},f.ticket.holder)).rejects.toThrow()
+ await expect(validateReceivedArchive({ticket:{...f.ticket,holder:f.source.holder}},f.source.holder)).rejects.toThrow('Handoff request context does not match the ticket.')
+ await expect(validateReceivedArchive({ticket:{...f.ticket,pkg:{...f.ticket.pkg,atomicBeefBase64:'AAAA'}}},f.ticket.holder)).rejects.toThrow('Received ticket transaction or signature checks failed.')
+ await expect(validateReceivedArchive({ticket:{...f.ticket,request:{...f.request,identitySignature:'AAAA'}}},f.ticket.holder)).rejects.toThrow('Signature DER must start with 0x30')
 })
 it('separates historical wallet reports from ticket evidence and deduplicates retries',async()=>{
  const f=await handoffFixture(),settlement=newSettlement(f.ticket)
@@ -24,14 +24,14 @@ it('separates historical wallet reports from ticket evidence and deduplicates re
  expect(archiveIdentity(a)).toBe(archiveIdentity(b))
  expect(a.settlement?.import).toBeUndefined()
  expect(a.settlement?.wallet).toBeUndefined()
- await expect(validateReceivedArchive({ticket:f.ticket,settlement:{...settlement,ticket:f.source}},f.ticket.holder)).rejects.toThrow()
+ await expect(validateReceivedArchive({ticket:f.ticket,settlement:{...settlement,ticket:f.source}},f.ticket.holder)).rejects.toThrow('Invalid handoff settlement context.')
 })
 
 import {restoreReceivedArchive,synchroniseReceivedTickets,type SyncIO} from '../src/handoff/sync.ts'
 import type {RecordStore} from '../src/handoff/types.ts'
 function memory<T extends {id:string;revision:number}>():RecordStore<T>{
  const values=new Map<string,T>()
- return {load:async id=>values.get(id),list:async()=>[...values.values()],save:async(next,expected)=>{expect(values.get(next.id)?.revision).toBe(expected);values.set(next.id,structuredClone(next))}}
+ return {load:async id=>values.get(id),list:async()=>[...values.values()],remove:async()=>{},save:async(next,expected)=>{expect(values.get(next.id)?.revision).toBe(expected);values.set(next.id,structuredClone(next))}}
 }
 const io=():SyncIO=>({recipients:memory(),settlements:memory(),check:()=>{},request:async()=>{throw Error('Network unavailable')}})
 it('restores an account archive into offline stores, with historical reports and no inferred wallet success',async()=>{
@@ -71,7 +71,7 @@ it('does not upload another account or overwrite a stronger local mining envelop
 it('stops restoration when the active account changes and rejects a mismatched archive response',async()=>{
  const f=await handoffFixture(),local=io(),archive={ticket:f.ticket},id=archiveIdentity(archive)
  local.request=(async(path:string)=>path.includes('?')?{tickets:[{id}],nextOffset:null}:{ticket:{...f.ticket,savedAt:'invalid'}}) as SyncIO['request']
- await expect(synchroniseReceivedTickets(f.ticket.holder,new AbortController().signal,local)).rejects.toThrow()
+ await expect(synchroniseReceivedTickets(f.ticket.holder,new AbortController().signal,local)).rejects.toThrow('Invalid saved handoff ticket.')
  expect(await local.recipients.list()).toHaveLength(0)
  local.check=()=>{throw Error('Account changed')}
  await expect(restoreReceivedArchive(archive,f.ticket.holder,local)).rejects.toThrow('Account changed')

@@ -7,7 +7,8 @@ export type Invitation = { kind: 'ticketsv-handoff-invitation'; version: 1; netw
 export type HandoffRequest = { kind: 'ticketsv-handoff-request'; version: 1; invitation: Invitation; recipientIdentity: string; request: ReceiveRequest; keySignature: string; identitySignature: string }
 export type HandoffTicket = { kind: 'ticketsv-handoff-ticket'; version: 1; origin: string; holder: string; trustedVenue: string; event: AttendeeEvidence['event']; pkg: TicketPackage; request: HandoffRequest | null; savedAt: string; issuanceEvidence?: AttendeeEvidence }
 export type Funding = { key: KeyBinding; amount: number; policy: ArcPolicy; txid?: string; beef?: string; index?: number; observation?: ArcObservation; rawReceipt?: unknown }
-export type Attempt = { id: string; outcome: 'pending' | 'complete' | 'unknown'; startedAt: string; finishedAt?: string }
+// reason: why an attempt ended unknown, kept so the screen can explain it.
+export type Attempt = { id: string; outcome: 'pending' | 'complete' | 'unknown'; startedAt: string; finishedAt?: string; reason?: string }
 export type SenderRecord = { kind: 'ticketsv-handoff-sender'; version: 1; id: string; revision: number; ticket: HandoffTicket; funding?: Funding; fundAttempt?: Attempt; signAttempt?: Attempt; request?: HandoffRequest; transfer?: HandoffTicket }
 export type RecipientRecord = { kind: 'ticketsv-handoff-recipient'; version: 1; id: string; revision: number; request: HandoffRequest; ticket?: HandoffTicket }
-export type RecordStore<T extends { id: string; revision: number }> = { load(id: string): Promise<T | undefined>; list(): Promise<T[]>; save(next: T, expectedRevision: number | undefined): Promise<void> }
+export type RecordStore<T extends { id: string; revision: number }> = { load(id: string): Promise<T | undefined>; list(): Promise<T[]>; save(next: T, expectedRevision: number | undefined): Promise<void>; remove(id: string, expectedRevision: number): Promise<void> }

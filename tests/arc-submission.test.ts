@@ -15,7 +15,7 @@ afterEach(()=>{vi.restoreAllMocks();vi.useRealTimers()})
 it('recognizes multiple-node propagation without treating it as mined evidence',()=>{
  const seen=parseObservation({...observation,txStatus:'SEEN_MULTIPLE_NODES'},id)
  expect(seen.txStatus).toBe('SEEN_MULTIPLE_NODES')
- expect(()=>verifyMiningAnchor(seen,snapshot)).toThrow()
+ expect(()=>verifyMiningAnchor(seen,snapshot)).toThrow('Provider has not reported current mining')
 })
 it('reports an unsupported pending provider status without accepting it as mining',()=>{
  expect(()=>parseObservation({...observation,txStatus:'NEW_PENDING_STATUS'},id)).toThrow('Unrecognized ARC transaction status (NEW_PENDING_STATUS). Mining is not confirmed; check again later.')
@@ -29,7 +29,7 @@ it('uses a fixed provider and preserves status without accepting the wrong trans
  await expect(fetchStatus(id,signal())).rejects.toThrow(/transaction/i)
  for(const txStatus of ['made-up','', 'MINED']) {
   if(txStatus==='MINED')expect(parseObservation({...observation,txStatus},id).txStatus).toBe('MINED')
-  else expect(()=>parseObservation({...observation,txStatus},id)).toThrow()
+  else expect(()=>parseObservation({...observation,txStatus},id)).toThrow('Unrecognized ARC transaction status. Mining is not confirmed; check again later.')
  }
 })
 it('404 is unknown only for GET; POST sends the exact reviewed EF once',async()=>{
@@ -45,14 +45,14 @@ it('validates policy and calculates the minimum with exact integer rounding',asy
  const p=await fetchPolicy(signal());expect(checkPolicy({rawBytes:553,fee:139},p)).toBe(1)
  expect(()=>checkPolicy({rawBytes:1001,fee:1},p)).toThrow(/fee/i)
  expect(()=>checkPolicy({rawBytes:100000001,fee:1000000},p)).toThrow(/size/i)
- expect(()=>checkPolicy({rawBytes:1,fee:1},{...p,feeBytes:0})).toThrow()
+ expect(()=>checkPolicy({rawBytes:1,fee:1},{...p,feeBytes:0})).toThrow('Invalid provider policy')
 })
 it('bounds responses, honors cancellation and never retries a failed POST',async()=>{
  const fetch=vi.spyOn(globalThis,'fetch').mockResolvedValue(new Response('x'.repeat(4*1024*1024+1)))
  await expect(fetchStatus(id,signal())).rejects.toThrow(/limit/i)
  fetch.mockRejectedValue(new TypeError('Failed to fetch'))
- await expect(postTransfer('abcd',id,signal())).rejects.toThrow();expect(fetch).toHaveBeenCalledTimes(2)
- const c=new AbortController();c.abort();await expect(fetchStatus(id,c.signal)).rejects.toThrow();expect(fetch).toHaveBeenCalledTimes(2)
+ await expect(postTransfer('abcd',id,signal())).rejects.toThrow('Failed to fetch');expect(fetch).toHaveBeenCalledTimes(2)
+ const c=new AbortController();c.abort();await expect(fetchStatus(id,c.signal)).rejects.toThrow('This operation was aborted');expect(fetch).toHaveBeenCalledTimes(2)
 })
 it('times out a stalled response body as well as a stalled connection',async()=>{
  vi.useFakeTimers()
@@ -86,9 +86,9 @@ it('attaches only a matching subject proof and preserves signed lineage',async()
  expect(candidate.pkg.lineageRawTxs).toEqual(e.pkg.lineageRawTxs)
  expect(Transaction.fromAtomicBEEF(Utils.toArray(candidate.pkg.atomicBeefBase64,'base64')).toHex()).toBe(f.transfer.toHex())
  expect(e.pkg.atomicBeefBase64).not.toBe(candidate.pkg.atomicBeefBase64)
- expect(()=>minedCandidate(e,{...o,blockHeight:b.height+1})).toThrow()
- expect(()=>minedCandidate(e,{...o,txid:id})).toThrow()
- expect(()=>minedCandidate(e,{...o,merklePath:undefined})).toThrow()
+ expect(()=>minedCandidate(e,{...o,blockHeight:b.height+1})).toThrow('Mining proof height or encoding mismatch')
+ expect(()=>minedCandidate(e,{...o,txid:id})).toThrow('Mining proof is for another transaction')
+ expect(()=>minedCandidate(e,{...o,merklePath:undefined})).toThrow('Mining proof or block details not available yet')
  expect(()=>verifyMiningAnchor(o,snapshot)).toThrow(/root/i)
 })
 it('checks a genuine public subject proof against local block hash and root without fetch',()=>{
@@ -99,6 +99,6 @@ it('checks a genuine public subject proof against local block hash and root with
  expect(verifyMiningAnchor(o,undefined)).toBe(false)
  expect(()=>verifyMiningAnchor({...o,blockHash:'00'.repeat(32)},snapshot)).toThrow(/block/i)
  expect(()=>verifyMiningAnchor({...o,txid:id},snapshot)).toThrow(/subject/i)
- expect(()=>verifyMiningAnchor({...o,txStatus:'MINED_IN_STALE_BLOCK'},snapshot)).toThrow()
+ expect(()=>verifyMiningAnchor({...o,txStatus:'MINED_IN_STALE_BLOCK'},snapshot)).toThrow('Provider has not reported current mining')
  expect(fetch).not.toHaveBeenCalled()
 })

@@ -1,5 +1,5 @@
 {
-  "name": "counterfoil-offline-ticket",
+  "name": "ticketsv",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,6 +9,7 @@
     "build": "npm run typecheck && vite build",
     "test": "vitest run",
     "preview": "vite preview --host 127.0.0.1 --port 4175 --strictPort",
+    "test:ui": "vitest run --config vitest.ui.config.ts",
     "test:browser": "playwright test",
     "predev": "node scripts/sync-design-preview.mjs",
     "prebuild": "node scripts/sync-design-preview.mjs",
@@ -23,12 +24,15 @@
     "@bsv/auth-express-middleware": "2.2.10",
     "@bsv/sdk": "2.8.11",
     "@vercel/functions": "3.11.0",
+    "brotli-wasm": "3.0.1",
     "express": "5.1.0",
+    "fflate": "0.8.3",
     "jsqr": "1.4.0",
     "pg": "8.16.3",
     "qrcode": "1.5.4",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "zxing-wasm": "3.1.7"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",
@@ -39,6 +43,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
+    "prettier": "3.3.3",
     "typescript": "6.0.3",
     "vite": "8.3.4",
     "vitest": "4.1.11"

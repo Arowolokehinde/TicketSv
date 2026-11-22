@@ -8,9 +8,9 @@ const records = [a,b].map(h=>parseProviderHeader(h,'whatsonchain',h.height))
 const bytes = Uint8Array.from(Buffer.from(records.map(h=>h.hex).join(''),'hex'))
 it('decodes real binary headers and rejects truncation, invalid work and excessive ranges',()=>{
  expect(decodeHeaderBatch(bytes,a.height,2)).toEqual(records)
- expect(()=>decodeHeaderBatch(bytes.slice(1),a.height,2)).toThrow()
- expect(()=>decodeHeaderBatch(new Uint8Array(160),a.height,2)).toThrow()
- expect(()=>decodeHeaderBatch(bytes,a.height,513)).toThrow()
+ expect(()=>decodeHeaderBatch(bytes.slice(1),a.height,2)).toThrow('Header batch length does not match its requested range.')
+ expect(()=>decodeHeaderBatch(new Uint8Array(160),a.height,2)).toThrow('Invalid compact target')
+ expect(()=>decodeHeaderBatch(bytes,a.height,513)).toThrow('Invalid header batch range.')
 })
 function upstream(alter?: (url:string)=>Response|undefined){
  return vi.fn(async (input: string|URL|Request)=>{
@@ -45,10 +45,29 @@ it('cancels and settles sibling response bodies when an upstream fails',async()=
  expect(cancelled).toBe(true)
 })
 
+it('retries a source request refused with 429 after a pause instead of failing the round',async()=>{
+ let refusals=2
+ const get=upstream(u=>u.endsWith('/resources')&&refusals-->0?new Response('',{status:429}):undefined), waits:number[]=[]
+ expect(await collectHeaderRange(a.height,2,new AbortController().signal,get,undefined,async ms=>{waits.push(ms)})).toEqual(records)
+ expect(waits).toEqual([1000,2000])
+ expect(get).toHaveBeenCalledTimes(6)
+})
+it('honours a bounded Retry-After and gives up after four attempts',async()=>{
+ const refused=()=>new Response('',{status:429,headers:{'Retry-After':'30'}})
+ const get=upstream(u=>u.endsWith('/resources')?refused():undefined), waits:number[]=[]
+ await expect(collectHeaderRange(a.height,2,new AbortController().signal,get,undefined,async ms=>{waits.push(ms)})).rejects.toThrow(/429/)
+ expect(waits).toEqual([5000,5000,5000])
+})
+it('does not retry other upstream failures',async()=>{
+ const get=upstream(u=>u.endsWith('/resources')?new Response('',{status:503}):undefined), waits:number[]=[]
+ await expect(collectHeaderRange(a.height,2,new AbortController().signal,get,undefined,async ms=>{waits.push(ms)})).rejects.toThrow(/503/)
+ expect(waits).toEqual([])
+})
+
 it('accepts the handoff mining range beyond the old experiment ceiling',()=>{
  expect(()=>checkHeaderRange(1766361,105)).not.toThrow()
 })
 
 it('keeps height arithmetic and per-request work bounded without a lifetime ceiling',()=>{
- for(const [start,count] of [[NaN,1],[1766465,0],[1766465,513],[2147483647,2],[1762323,1],[1766465,1.5]])expect(()=>checkHeaderRange(start,count)).toThrow()
+ for(const [start,count] of [[NaN,1],[1766465,0],[1766465,513],[2147483647,2],[1762323,1],[1766465,1.5]])expect(()=>checkHeaderRange(start,count)).toThrow('Invalid header batch range.')
 })

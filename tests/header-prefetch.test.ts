@@ -24,7 +24,7 @@ it('skips discovery when another worker already claimed it, or the cache is bloc
 it('rejects wrong-network and invalid height hints without changing the collection target',async()=>{
  for(const value of [{chain:'main',blocks:CHECKPOINT.height},{chain:'test',blocks:Number.MAX_SAFE_INTEGER}]){
   const db=database()
-  await expect(prefetchHeaderTarget(db.pool,new AbortController().signal,async()=>Response.json(value))).rejects.toThrow()
+  await expect(prefetchHeaderTarget(db.pool,new AbortController().signal,async()=>Response.json(value))).rejects.toThrow('Invalid testnet height hint for header preparation.')
   expect(db.query.mock.calls.some(([sql])=>sql.includes('GREATEST'))).toBe(false)
  }
 })

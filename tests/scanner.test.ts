@@ -38,7 +38,7 @@ it('loads existing attendee and signed handoff exports without changing their tr
 it('binds scans to the selected event and never takes trust from the scanned package',async()=>{
  const f=await ticketFixture(),review=scannerReview({...event(f.identity),id:'another-event'},'https://ticketsv.example')
  expect((await verifyScannerTicket(f.pkg,review)).verification.checks[0].reason).toMatch(/different event/i)
- expect(()=>normalizeScannerTicket({kind:'ticketsv-handoff-invitation',trustedVenue:f.identity})).toThrow()
+ expect(()=>normalizeScannerTicket({kind:'ticketsv-handoff-invitation',trustedVenue:f.identity})).toThrow('Load a saved ticket, updated handoff ticket or ticket-package file. Invitations and receiving requests are not tickets.')
 })
 it('keeps unmined valid transfers online-check-required and missing anchors incomplete',async()=>{
  const f=await ticketFixture(),review=scannerReview(event(f.identity),'https://ticketsv.example')
@@ -50,6 +50,6 @@ it('keeps unmined valid transfers online-check-required and missing anchors inco
 })
 it('refuses replacing a saved event organiser silently and bounds imports',async()=>{
  const f=await ticketFixture(),review=scannerReview(event(f.identity),'https://ticketsv.example')
- expect(()=>scannerReview({...event(f.identity),venueIdentity:'02'+'11'.repeat(32)},'https://ticketsv.example',review)).toThrow()
+ expect(()=>scannerReview({...event(f.identity),venueIdentity:'02'+'11'.repeat(32)},'https://ticketsv.example',review)).toThrow('Invalid ticket package or receiving request')
  expect(()=>normalizeScannerTicket('x'.repeat(4*1024*1024+1))).toThrow(/4 MiB/)
 })

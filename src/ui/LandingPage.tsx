@@ -6,7 +6,7 @@ import { LandingDetails } from './LandingDetails.tsx'
 export function LandingPage(): React.JSX.Element {
   const [paused, setPaused] = useState(false)
   return (
-<main className={paused ? 'landing motion-paused' : 'landing'}>
+<main id="main" className={paused ? 'landing motion-paused' : 'landing'}>
  
  <section className="landing-hero">
   <div className="hero-copy">

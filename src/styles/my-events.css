@@ -1,0 +1,11 @@
+.my-events .event-list-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.my-events-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.my-events-actions a.btn { text-decoration: none; }
+.my-events-summary { margin: 4px 0 0; font: 600 13px/1.5 Arial, sans-serif; color: #536143; }
+.my-events-requests { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.my-events-requests li { display: grid; gap: 10px; padding: 14px; border: 1px solid #e8eadf; border-radius: 14px; background: #f9faf3; }
+.my-events-requests li > div { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.my-events-requests strong { font: 600 14px/1.4 Arial, sans-serif; overflow-wrap: anywhere; }
+.my-events-requests .event-help { flex-basis: 100%; margin: 0; }
+.my-events-elsewhere { margin-top: 24px; }
+.my-events-elsewhere h2 { font: 600 18px/1.3 Arial, sans-serif; }

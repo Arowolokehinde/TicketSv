@@ -1,9 +1,19 @@
+import { APP_WORKER } from './persist.ts'
+export class OfflineAppUnavailableError extends Error {
+ constructor(message: string) { super(message); this.name = 'OfflineAppUnavailableError' }
+}
+export function offlineAppLimitation(): string | null {
+ if (!window.isSecureContext) return 'Open TicketSV using HTTPS to prepare the app for offline reopening.'
+ if (typeof navigator.serviceWorker?.register !== 'function') return 'This browser cannot reopen TicketSV offline. You can continue online, but do not rely on reopening this page without internet.'
+ return null
+}
 export type OfflineAppStatus = 'ready' | 'waiting'
-export function prepareAttendeeApp(signal:AbortSignal):Promise<OfflineAppStatus>{return prepareCachedApp(signal,{worker:'/attendee-offline-worker.js',scope:'/offline/',message:'PREPARE_ATTENDEE_CACHE'})}
+export function prepareAttendeeApp(signal:AbortSignal):Promise<OfflineAppStatus>{return prepareCachedApp(signal,{worker:APP_WORKER,scope:'/',message:'PREPARE_APP_CACHE'})}
 export async function prepareCachedApp(signal: AbortSignal,config:{worker:string;scope:string;message:string}): Promise<OfflineAppStatus> {
  signal.throwIfAborted()
  if (!import.meta.env.PROD) throw Error('Offline app preparation needs the production preview. Run npm run build, then npm run preview -- --port 5175 on this same address.')
- if (!window.isSecureContext || !('serviceWorker' in navigator)) throw Error('This browser needs HTTPS or localhost and service worker support to save the app.')
+ const limitation = offlineAppLimitation()
+ if (limitation) throw new OfflineAppUnavailableError(limitation)
  let registration: ServiceWorkerRegistration
  try {
   registration = await navigator.serviceWorker.register(config.worker, { scope: config.scope, updateViaCache: 'none' })
@@ -39,4 +49,28 @@ export async function prepareCachedApp(signal: AbortSignal,config:{worker:string
  })
  signal.throwIfAborted()
  return registration.waiting ? 'waiting' : 'ready'
+}
+
+// Read-only readiness check for resuming a saved delivery. The worker checks
+// its own complete asset list; registration presence alone is not readiness.
+export async function attendeeAppStatus(signal: AbortSignal): Promise<OfflineAppStatus | 'missing'> {
+ signal.throwIfAborted()
+ if (typeof navigator.serviceWorker?.getRegistration !== 'function') return 'missing'
+ const registration = await navigator.serviceWorker.getRegistration('/')
+ signal.throwIfAborted()
+ if (!registration || registration.scope !== new URL('/', location.origin).href || registration.active?.scriptURL !== new URL(APP_WORKER, location.origin).href) return 'missing'
+ if (registration.waiting) return 'waiting'
+ const ready = await new Promise<boolean>((resolve, reject) => {
+  const channel = new MessageChannel()
+  const cleanup = () => { clearTimeout(timer); channel.port1.close(); signal.removeEventListener('abort', abort) }
+  const abort = () => { cleanup(); reject(signal.reason) }
+  const timer = setTimeout(() => { cleanup(); resolve(false) }, 3000)
+  channel.port1.onmessage = event => { cleanup(); resolve(event.data?.ready === true) }
+  signal.addEventListener('abort', abort, { once: true })
+  if (signal.aborted) { abort(); return }
+  try { registration.active!.postMessage('CHECK_APP_CACHE', [channel.port2]) }
+  catch { cleanup(); resolve(false) }
+ })
+ signal.throwIfAborted()
+ return ready ? 'ready' : 'missing'
 }

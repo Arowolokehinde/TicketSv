@@ -13,7 +13,7 @@
   ],
   "headers": [
     {"source": "/(.*)", "headers": [{"key":"X-Content-Type-Options","value":"nosniff"}]},
-    {"source": "/(attendee-offline-worker|offline-worker|scanner-offline-worker).js", "headers": [{"key":"Cache-Control","value":"no-cache, no-store, must-revalidate"}]},
+    {"source": "/(ticketsv-offline-worker|attendee-offline-worker|offline-worker|scanner-offline-worker).js", "headers": [{"key":"Cache-Control","value":"no-cache, no-store, must-revalidate"}]},
     {"source": "/index.html", "headers": [{"key":"Cache-Control","value":"no-cache"}]}
   ],
   "crons": [{"path":"/api/internal/headers/collect","schedule":"0 5 * * *"}]

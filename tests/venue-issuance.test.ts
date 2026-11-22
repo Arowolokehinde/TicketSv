@@ -1,6 +1,7 @@
-import { expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { PrivateKey } from '@bsv/sdk'
 import { syntheticSigningWallet } from './helpers/synthetic-signing-wallet.ts'
-import { prepareVenueRecipient, issueVenueTicket } from '../src/wallet/venue-issuance.ts'
+import { findIssuanceAction, prepareVenueRecipient, issueVenueTicket } from '../src/wallet/venue-issuance.ts'
 import { verifyIssuer, verifyContinuity, verifyRecipient } from '../src/verification/authenticity.ts'
 
 async function fixture() {
@@ -65,4 +66,35 @@ it('rejects a substituted receiving key before creating a transaction', async ()
  await expect(issueVenueTicket(wallet, owner, 'event-test', 'ticket-test', other, async () => {})).rejects.toThrow(/receiving key/i)
  expect(create).not.toHaveBeenCalled()
  expect(other.recipient.publicKey).not.toBe(request.recipient.publicKey)
+})
+describe('findIssuanceAction', () => {
+ const owner = PrivateKey.fromRandom().toPublicKey().toString(), ticketId = '11111111-2222-4333-8444-555555555555'
+ const action = (txid: string, status: string) => ({ txid: txid.repeat(64), status, satoshis: 0, isOutgoing: true, description: 'Issue TicketSV event ticket', version: 1, lockTime: 0 })
+ const reader = (actions: ReturnType<typeof action>[], extra: { network?: string; totalActions?: number } = {}) => ({
+  getNetwork: async () => ({ network: extra.network ?? 'testnet' }), getPublicKey: async () => ({ publicKey: owner }),
+  listActions: vi.fn(async (_args: unknown) => ({ totalActions: extra.totalActions ?? actions.length, actions })),
+ }) as unknown as Parameters<typeof findIssuanceAction>[0] & { listActions: ReturnType<typeof vi.fn> }
+ it('asks the wallet only for this ticket label', async () => {
+  const wallet = reader([])
+  expect(await findIssuanceAction(wallet, owner, ticketId)).toBeUndefined()
+  expect(wallet.listActions).toHaveBeenCalledWith(expect.objectContaining({ labels: [`ticketsv-issuance-${ticketId}`], labelQueryMode: 'any' }))
+ })
+ it('treats failed actions as absent', async () => {
+  expect(await findIssuanceAction(reader([action('a', 'failed')]), owner, ticketId)).toBeUndefined()
+ })
+ it('returns the one live transaction', async () => {
+  expect(await findIssuanceAction(reader([action('a', 'failed'), action('b', 'completed')]), owner, ticketId)).toBe('b'.repeat(64))
+ })
+ it('stops when several live transactions carry the label', async () => {
+  await expect(findIssuanceAction(reader([action('a', 'unproven'), action('b', 'completed')]), owner, ticketId)).rejects.toThrow(/several/i)
+ })
+ it('stops when the wallet listing is incomplete', async () => {
+  await expect(findIssuanceAction(reader([], { totalActions: 1 }), owner, ticketId)).rejects.toThrow(/incomplete/i)
+ })
+ it('checks network and identity before listing', async () => {
+  const wallet = reader([], { network: 'mainnet' })
+  await expect(findIssuanceAction(wallet, owner, ticketId)).rejects.toThrow(/testnet/i)
+  expect(wallet.listActions).not.toHaveBeenCalled()
+  await expect(findIssuanceAction(reader([]), PrivateKey.fromRandom().toPublicKey().toString(), ticketId)).rejects.toThrow(/identity/i)
+ })
 })

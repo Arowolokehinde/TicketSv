@@ -12,7 +12,7 @@ export default defineConfig(({mode})=>{
   const env=loadEnv(mode,process.cwd(),''),secret=process.env.AUTH_SERVER_PRIVATE_KEY??env.AUTH_SERVER_PRIVATE_KEY
   const identity=secret?PrivateKey.fromHex(secret).toPublicKey().toString():''
   return {
-  define:{__TICKETSV_AUTH_IDENTITY__:JSON.stringify(identity)},
+  define:{__TICKETSV_AUTH_IDENTITY__:JSON.stringify(identity),__TICKETSV_DEV_ROUTES__:JSON.stringify(mode==='development'||(process.env.VITE_DEV_ROUTES??env.VITE_DEV_ROUTES)==='true')},
   plugins: [react(), offlineBuild()],
   server: { host: '127.0.0.1', port: 5175, strictPort: true, proxy },
   preview: { host: '127.0.0.1', port: 4175, strictPort: true, proxy },

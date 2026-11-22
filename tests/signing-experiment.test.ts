@@ -141,6 +141,6 @@ describe('noSend signing experiment', () => {
     const beef = Beef.fromBinary(source.source.atomicBeef)
     beef.version = 0xefbe0002 // BEEF V2 supports explicit txid-only entries.
     beef.makeTxidOnly(beef.txs[0]!.txid)
-    await expect(inspectFinal({ tx: beef.toBinaryAtomic(source.source.txid), txid: source.source.txid }, source.sourceScript)).rejects.toThrow()
+    await expect(inspectFinal({ tx: beef.toBinaryAtomic(source.source.txid), txid: source.source.txid }, source.sourceScript)).rejects.toThrow('Incomplete Atomic BEEF: full dependencies are required.')
   })
 })

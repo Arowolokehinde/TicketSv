@@ -1,43 +1,135 @@
-import { workspaceRoot, type WorkspaceRole } from './Workspace.tsx'
+import { useEffect, useState } from 'react'
+import { loadSnapshot } from '../headers/store.ts'
+import type { HeaderSnapshot } from '../headers/validate.ts'
+import { clearNetworkActivity, readNetworkActivity, subscribeNetworkActivity, type NetworkActivity } from '../network/recorder.ts'
+import { outcomeText } from './NetworkLine.tsx'
 
-export function PreparationPage({ role }: { role: WorkspaceRole }): React.JSX.Element {
-  const root = workspaceRoot[role]
-  if (role !== 'scanner') return <section className="request-start">
-    <span className="home-eyebrow">BEFORE YOU DISCONNECT</span>
-    <h2>Prepare with your ticket.</h2>
-    <p>Offline preparation is part of receiving or transferring a ticket. Open the relevant flow to prepare the app and required evidence for that ticket.</p>
-    <div className="actions"><a className="btn primary" href="/offline/handoff?step=receive">Receive a ticket</a><a className="btn" href="/offline/handoff?step=prepare">Transfer a ticket</a></div>
-  </section>
-  const checks = [
-    ['App reopening', 'Not prepared', 'Offline caching and a closed-browser reopening test are still required.'],
-    ['Local storage', 'Not initialized', 'Ticket-package persistence has not been connected.'],
-    [role === 'scanner' ? 'Trusted venue identity' : 'Wallet access', 'Not configured', role === 'scanner' ? 'The scanner needs a trusted issuer key before it can establish authenticity.' : 'Wallet access must be tested on this device before offline handoff.'],
-    ['Required block headers', 'Not synced', 'No local header snapshot is available.'],
-    ...(role === 'scanner' ? [] : [['Signing and funding evidence', 'Not tested', 'Offline signing requires available keys and complete funding proofs.']]),
-  ]
-  return <>
-    <div className="home-intro"><p>A little preparation. A handoff without a connection.</p></div>
-    <div className="cols"><section className="card"><h2 className="section-heading">This device is not ready offline.</h2><p>These checks will run against the actual app, wallet and stored evidence once their integrations are connected.</p>
-      <ul className="preparation-list">{checks.map(([name, status, detail]) => <li key={name}><div><h3>{name}</h3><span className="badge b-outline">{status}</span></div><p>{detail}</p></li>)}</ul>
-      <button className="btn primary" disabled>Prepare this device</button>
-    </section><aside className="handoff-note"><span className="home-eyebrow">BEFORE DISCONNECTING</span><h3>Prepare online.<br />Check offline.</h3><p>A later ticket may need headers newer than the ones saved here. Keep the package, reconnect and sync before retrying if evidence is missing.</p><a href={`${root}/headers`}>View header status ↗</a></aside></div>
-  </>
+export function headerSummary(snapshot: HeaderSnapshot | undefined): { range: string; saved: string; source: string } | undefined {
+  const first = snapshot?.headers[0]?.height,
+    last = snapshot?.headers.at(-1)?.height
+  if (!snapshot || first === undefined || last === undefined) return undefined
+  return {
+    range: `${first.toLocaleString('en-US')}–${last.toLocaleString('en-US')} (${snapshot.headers.length.toLocaleString('en-US')} headers)`,
+    saved: new Date(snapshot.syncedAt).toLocaleString(),
+    source:
+      snapshot.source === 'ticketsv-cache'
+        ? 'TicketSV shared cache, checked on this device'
+        : 'WhatsOnChain and Chaintracks, compared on this device',
+  }
 }
 
 export function HeadersPage(): React.JSX.Element {
-  return <section className="request-start"><span className="home-eyebrow">THE LOCAL CHAIN VIEW</span><h2>Small headers.<br /><em>Independent checks.</em></h2>
-    <p>Block headers give the local verifier a Merkle root to check each mined transaction against. Headers must be synced before going offline.</p>
-    <dl className="kv"><dt>Local snapshot</dt><dd>None</dd><dt>Tip height</dt><dd>Not available</dd><dt>Last sync</dt><dd>Never</dd><dt>Sources</dt><dd>Not configured</dd></dl>
-    <div className="request-notice"><b>Header sync is not connected yet.</b><p>No header download or verification has occurred.</p></div>
-    <button className="btn primary" disabled>Sync headers</button>
-    <p className="boundary">The planned POC validates proof of work and header linkage from a pinned checkpoint. Full difficulty-adjustment validation is outside its scope.</p>
-  </section>
+  const [summary, setSummary] = useState<ReturnType<typeof headerSummary> | null>(null)
+  useEffect(() => {
+    let current = true
+    void loadSnapshot().then(
+      value => {
+        if (current) setSummary(headerSummary(value))
+      },
+      () => {
+        if (current) setSummary(undefined)
+      },
+    )
+    return () => {
+      current = false
+    }
+  }, [])
+  return (
+    <section className="request-start">
+      <span className="home-eyebrow">THE LOCAL CHAIN VIEW</span>
+      <h2>
+        Small headers.
+        <br />
+        <em>Independent checks.</em>
+      </h2>
+      <p>
+        Block headers give the local verifier a Merkle root to check each mined transaction against. Headers are downloaded while online
+        when a ticket check needs them, then reused offline.
+      </p>
+      {summary === null ? (
+        <p role="status">Reading saved headers…</p>
+      ) : summary ? (
+        <dl className="kv">
+          <dt>Saved range</dt>
+          <dd>{summary.range}</dd>
+          <dt>Last saved</dt>
+          <dd>{summary.saved}</dd>
+          <dt>Source</dt>
+          <dd>{summary.source}</dd>
+        </dl>
+      ) : (
+        <p>No headers are saved on this device yet. Verify a ticket while online to prepare them.</p>
+      )}
+      <p className="boundary">
+        This device validates proof of work and header linkage from a pinned checkpoint. Full difficulty-adjustment validation is outside
+        this POC.
+      </p>
+    </section>
+  )
+}
+
+const clock = (at: number) => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+export function ActivityView({ activity, onClear }: { activity: NetworkActivity; onClear: () => void }): React.JSX.Element {
+  const checks = [...activity.checks].reverse(),
+    requests = [...activity.requests].reverse()
+  return (
+    <>
+      <h3>Verification checks</h3>
+      {checks.length ? (
+        <ul className="activity-list">
+          {checks.map(check => (
+            <li key={`${check.startedAt}-${check.label}`}>
+              <time>{clock(check.startedAt)}</time> {check.label} · {check.verdict ?? 'no verdict'} ·{' '}
+              {check.measured
+                ? `${check.requestCount} network request${check.requestCount === 1 ? '' : 's'}${check.otherLoads ? ` · ${check.otherLoads} other browser loads` : ''}`
+                : 'network not measured'}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No checks recorded on this device.</p>
+      )}
+      <h3>Network requests</h3>
+      {requests.length ? (
+        <ul className="activity-list">
+          {requests.map((request, index) => (
+            <li key={`${request.at}-${index}`}>
+              <time>{clock(request.at)}</time> {request.method} {request.purpose} · <code>{request.path}</code> · {outcomeText(request)}
+              {request.ms === undefined ? '' : ` · ${request.ms} ms`}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No network requests recorded on this device.</p>
+      )}
+      <button className="btn" disabled={!checks.length && !requests.length} onClick={onClear}>
+        Clear activity
+      </button>
+      <p className="limits">
+        Not visible to this app: traffic inside the BSV Browser wallet, BSV Desktop&apos;s own internet traffic, and files the offline app
+        cache downloads. Files the browser loads outside fetch, such as images and scripts, are counted only as other browser loads during a
+        check.
+      </p>
+    </>
+  )
 }
 
 export function ActivityPage(): React.JSX.Element {
-  return <section className="request-start"><span className="home-eyebrow">APP-OBSERVED ACTIVITY</span><h2>The checks.<br /><em>In the open.</em></h2>
-    <p>This page will show header syncs, broadcasts and the app’s verification activity when those services are connected.</p>
-    <div className="empty-activity"><span aria-hidden="true">—</span><h3>No activity journal yet.</h3><p>Wallet connection checks are shown in the wallet panel. A saved activity history is not available here yet.</p></div>
-    <p className="limits">The network recorder is not implemented yet. This is an uninitialized activity view, not a network audit. Loading the website requests its own assets; native wallet traffic is outside the future app log’s visibility.</p>
-  </section>
+  const [activity, setActivity] = useState(readNetworkActivity)
+  useEffect(() => subscribeNetworkActivity(() => setActivity(readNetworkActivity())), [])
+  return (
+    <section className="request-start">
+      <span className="home-eyebrow">APP-OBSERVED ACTIVITY</span>
+      <h2>
+        The checks.
+        <br />
+        <em>In the open.</em>
+      </h2>
+      <p>
+        Every request this page sends with fetch is recorded here, newest first, with each verification check and the requests made during
+        it. The last 200 requests and 50 checks are kept in this browser only. Query strings and request contents are never recorded.
+      </p>
+      <ActivityView activity={activity} onClear={clearNetworkActivity} />
+    </section>
+  )
 }

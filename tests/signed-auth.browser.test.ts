@@ -2,16 +2,25 @@ import { expect, test, type Page } from '@playwright/test'
 import { PrivateKey, ProtoWallet } from '@bsv/sdk'
 import { syntheticSigningWallet } from './helpers/synthetic-signing-wallet.ts'
 
-
 async function softwareWallet(page: Page, key = PrivateKey.fromRandom(), issue = false) {
-  const wallet = new ProtoWallet(key), signing = issue ? syntheticSigningWallet() : undefined
+  const wallet = new ProtoWallet(key),
+    signing = issue ? syntheticSigningWallet() : undefined
   const calls: string[] = []
   await page.route('http://localhost:3321/**', async route => {
     const method = new URL(route.request().url()).pathname.slice(1)
     calls.push(method)
     const allowed = ['getPublicKey', 'createSignature', 'verifySignature', 'createHmac', 'verifyHmac']
     const args = route.request().postDataJSON()
-    const result = method === 'getNetwork' ? { network: 'testnet' } : method === 'getVersion' ? { version: 'test-wallet-1.0' } : method === 'createAction' && signing ? await signing.createAction(args) : allowed.includes(method) ? await (wallet[method as keyof ProtoWallet] as Function).call(wallet, args) : { error: 'Forbidden wallet method' }
+    const result =
+      method === 'getNetwork'
+        ? { network: 'testnet' }
+        : method === 'getVersion'
+          ? { version: 'test-wallet-1.0' }
+          : method === 'createAction' && signing
+            ? await signing.createAction(args)
+            : allowed.includes(method)
+              ? await (wallet[method as keyof ProtoWallet] as Function).call(wallet, args)
+              : { error: 'Forbidden wallet method' }
     await route.fulfill({ json: result, headers: { 'access-control-allow-origin': '*' } })
   })
   return calls
@@ -27,8 +36,6 @@ test('landing login, organiser event save, reload, logout and direct URL protect
   await expect(page).toHaveURL(/\/tickets$/)
   await page.getByRole('link', { name: 'Create event', exact: true }).click()
   await expect(page).toHaveURL(/\/venue$/)
-  await expect(page.getByRole('button', { name: 'Create event', exact: true })).toBeEnabled()
-  await page.getByRole('button', { name: 'Create event', exact: true }).click()
   await page.getByLabel('Event name', { exact: true }).fill('Authenticated event')
   await page.getByLabel('Event date', { exact: true }).fill('2027-01-02')
   await page.getByLabel('Start time', { exact: true }).fill('18:00')
@@ -64,7 +71,10 @@ test('direct dashboard requires login and offline experiment is not gated', asyn
 })
 
 test('closing login before wallet returns cannot navigate or create a session', async ({ page }) => {
-  await page.route('http://localhost:3321/**', async route => { await new Promise(resolve => setTimeout(resolve, 500)); await route.fulfill({ json: { network: 'testnet' } }).catch(() => {}) })
+  await page.route('http://localhost:3321/**', async route => {
+    await new Promise(resolve => setTimeout(resolve, 500))
+    await route.fulfill({ json: { network: 'testnet' } }).catch(() => {})
+  })
   await page.goto('/')
   await page.getByRole('link', { name: 'Dashboard', exact: true }).click()
   await page.getByRole('button', { name: 'Connect and sign in', exact: true }).click()
@@ -77,10 +87,17 @@ test('closing login before wallet returns cannot navigate or create a session', 
 test('cancelling after the server commits revokes that attempt', async ({ page }) => {
   await softwareWallet(page)
   let reached!: () => void, release!: () => void
-  const committed = new Promise<void>(resolve => { reached = resolve })
-  const held = new Promise<void>(resolve => { release = resolve })
+  const committed = new Promise<void>(resolve => {
+    reached = resolve
+  })
+  const held = new Promise<void>(resolve => {
+    release = resolve
+  })
   await page.route('**/api/auth/login', async route => {
-    if (!route.request().headers()['x-bsv-auth-signature']) { await route.continue(); return }
+    if (!route.request().headers()['x-bsv-auth-signature']) {
+      await route.continue()
+      return
+    }
     const response = await route.fetch()
     reached()
     await held
@@ -99,7 +116,6 @@ test('cancelling after the server commits revokes that attempt', async ({ page }
   await expect(page.getByRole('dialog')).toBeVisible()
 })
 
-
 test('two authenticated accounts publish, request, issue and receive through the real API', async ({ page, browser }) => {
   const organiserCalls = await softwareWallet(page, new PrivateKey(1), true)
   const buyerContext = await browser.newContext({ viewport: page.viewportSize()! })
@@ -110,7 +126,6 @@ test('two authenticated accounts publish, request, issue and receive through the
     await page.goto('/venue')
     await page.getByRole('button', { name: 'Connect wallet', exact: true }).click()
     await page.getByRole('button', { name: 'Connect and sign in', exact: true }).click()
-    await page.getByRole('button', { name: 'Create event', exact: true }).click()
     await page.getByLabel('Event name', { exact: true }).fill(name)
     await page.getByLabel('Event date', { exact: true }).fill('2027-06-12')
     await page.getByLabel('Start time', { exact: true }).fill('19:30')
@@ -127,7 +142,7 @@ test('two authenticated accounts publish, request, issue and receive through the
     await buyerPage.getByRole('checkbox').check()
     await buyerPage.getByRole('button', { name: 'Request ticket', exact: true }).click()
     await expect(buyerPage.getByText(/Request sent/)).toBeVisible()
-    await page.getByRole('button', { name: 'Back to events', exact: true }).click()
+    await page.getByRole('button', { name: 'Back to My events', exact: true }).click()
     await page.getByRole('button', { name: `Tickets for ${name}` }).click()
     await page.getByRole('button', { name: 'Review new issuance', exact: true }).click()
     await expect(page.getByText('Attendee account', { exact: true })).toBeVisible()
@@ -145,5 +160,7 @@ test('two authenticated accounts publish, request, issue and receive through the
     await expect(buyerPage.locator('.dashboard-tickets article').filter({ hasText: name })).toBeVisible()
     expect(organiserCalls.filter(c => c === 'createAction')).toHaveLength(1)
     expect(await buyerPage.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
-  } finally { await buyerContext.close() }
+  } finally {
+    await buyerContext.close()
+  }
 })

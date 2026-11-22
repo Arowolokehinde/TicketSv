@@ -5,6 +5,7 @@ import type {HeaderSnapshot} from '../headers/validate.ts'
 import {verifyTicket} from '../verification/verifyTicket.ts'
 import {verifyIssuer,verifyContinuity,verifyRecipient} from '../verification/authenticity.ts'
 import {readReopeningEvidence,type ReopeningEvidence} from './evidence.ts'
+import {checkWallet} from '../wallet/identity.ts'
 
 export function completedTransfer(value:unknown){
  const r=readExperiment(value)
@@ -37,8 +38,7 @@ async function proveEvidenceKey(wallet:KeyWallet,r:Pick<ReopeningEvidence,'trust
   }catch(e){log(`${method} — failed`);throw e}
  }
  async function identity(){
-  if((await call('getNetwork',()=>wallet.getNetwork({}))).network!=='testnet')throw new Error('Select testnet for this key access check')
-  if((await call('getPublicKey',()=>wallet.getPublicKey({identityKey:true}))).publicKey!==r.trusted)throw new Error('This experiment requires the original same-wallet identity')
+  await checkWallet(wallet,{identity:r.trusted,messages:{network:'Select testnet for this key access check',identity:'This experiment requires the original same-wallet identity'}},call)
  }
  await identity()
  if((await call('getPublicKey',()=>wallet.getPublicKey({protocolID:key.protocolID,keyID:key.keyID,counterparty:key.counterparty,forSelf:true}))).publicKey!==key.publicKey)throw new Error('Wallet receiving key does not match the saved buyer request')

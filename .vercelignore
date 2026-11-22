@@ -10,7 +10,7 @@ artifacts/
 test-results/
 playwright-report/
 tests/
-Signinerror.md
+docs/signing-incident-report.md
 docs-to-read.md
 .DS_Store
 *.log

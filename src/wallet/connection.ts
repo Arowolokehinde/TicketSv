@@ -3,6 +3,16 @@ import { BSV_NETWORK } from '../config/network.ts'
 import { readFailureResponse, type WalletFailureResponse } from './diagnostics.ts'
 
 export type WalletTransport = 'desktop-http' | 'desktop-https' | 'browser-native'
+// A native mobile browser must not silently route a handoff to desktop localhost.
+// An explicit connection preference still takes precedence over bridge detection.
+export function preferredWalletTransport(): WalletTransport {
+ try {
+  const saved = sessionStorage.getItem('ticketsv-wallet-transport')
+  if (saved === 'desktop-http' || saved === 'desktop-https' || saved === 'browser-native') return saved
+ } catch { /* Storage may be unavailable; inspect the native bridge below. */ }
+ const host = typeof window === 'undefined' ? undefined : window as Window & { ReactNativeWebView?: { postMessage?: unknown } }
+ return typeof host?.ReactNativeWebView?.postMessage === 'function' ? 'browser-native' : 'desktop-http'
+}
 export type ProbeClient = Pick<WalletInterface, 'getNetwork' | 'getVersion' | 'getPublicKey'>
 export type ProbeCall = { method: keyof ProbeClient; status: 'started' | 'returned' | 'failed' }
 export type ConnectionEvidence = { network: 'testnet'; identityKey: string; version: string; checkedAt: string }

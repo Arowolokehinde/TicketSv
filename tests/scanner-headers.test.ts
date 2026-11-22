@@ -28,7 +28,7 @@ it('reuses saved coverage and never replaces it with a shorter shared snapshot',
 it('rejects corrupt batches and blocked source history without saving replacements',async()=>{
  vi.spyOn(store,'loadSnapshot').mockResolvedValue(undefined);const save=vi.spyOn(store,'saveSnapshot').mockResolvedValue()
  const get=vi.spyOn(globalThis,'fetch').mockImplementation(async path=>String(path).includes('/status')?Response.json(status):range(true))
- await expect(prepareScannerHeaders(new AbortController().signal)).rejects.toThrow();expect(save).not.toHaveBeenCalled()
+ await expect(prepareScannerHeaders(new AbortController().signal)).rejects.toThrow('Header proof of work failed');expect(save).not.toHaveBeenCalled()
  get.mockResolvedValue(Response.json({...status,state:'blocked'}))
  await expect(prepareScannerHeaders(new AbortController().signal)).rejects.toThrow(/review/)
 })

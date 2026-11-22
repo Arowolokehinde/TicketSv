@@ -27,7 +27,9 @@ export async function readHeaderCache(pool:Pool):Promise<CacheState>{return stat
 // Progress is an untrusted scheduling hint; range serving still validates the
 // actual retained snapshot before returning bytes. Polling never transfers it.
 export async function readHeaderProgress(pool:Pool):Promise<CacheState>{
- const value=(await pool.query("SELECT target,state,error,checked_at,tip_height AS tip FROM header_cache WHERE cache_key=$1",[KEY])).rows[0]
+ return progress((await pool.query("SELECT target,state,error,checked_at,tip_height AS tip FROM header_cache WHERE cache_key=$1",[KEY])).rows[0])
+}
+function progress(value?:{tip:number|null;target:number;state:CacheState['state'];error:string|null;checked_at:Date|null}):CacheState{
  const tip=value?.tip??null,target=value?.target??CHECKPOINT.height
  if(tip!==null&&!validHeaderHeight(tip)||!validHeaderHeight(target))throw Error('Invalid shared header progress metadata.')
  return {network:'testnet',checkpoint:CHECKPOINT,tip,target,state:value?.state??'queued',error:value?.error??null,checkedAt:value?.checked_at?.toISOString()??null}
@@ -52,14 +54,20 @@ export async function queueHeaders(pool:Pool,height:number):Promise<CacheState>{
  await requestHeaderHeight(pool,height)
  return readHeaderProgress(pool)
 }
-export async function cachedHeaderRange(pool:Pool,start:number,count:number):Promise<{bytes:Uint8Array;count:number;state:CacheState}>{
+// Postgres returns only the requested slice, so serving cost does not grow with
+// the saved chain. The snapshot was validated when promoted, and each device
+// checks checkpoint, linkage and proof of work itself.
+export async function cachedHeaderRange(pool:Pool,start:number,count:number):Promise<{bytes:Uint8Array;count:number;state:CacheState;cacheable:boolean}>{
  try{checkHeaderRange(start,count)}catch{throw new ApiError(400,'Invalid header batch range.')}
- const value=await row(pool),status=state(value)
+ const offset=start-CHECKPOINT.height
+ const value=(await pool.query("SELECT target,state,error,checked_at,tip_height AS tip,jsonb_path_query_array(snapshot->'headers','lax $[$from to $to]',jsonb_build_object('from',$2::int,'to',$3::int)) AS headers FROM header_cache WHERE cache_key=$1",[KEY,offset,offset+count-1])).rows[0]
+ const status=progress(value)
  if(status.state==='blocked')throw new ApiError(409,'Shared header history needs operator review; saved local data was not replaced.')
- if(!value?.snapshot||status.tip===null||start>status.tip)throw new ApiError(409,'Shared headers are still being prepared.')
- const snapshot=checkedSnapshot(value.snapshot)
- const headers=snapshot.headers.slice(start-CHECKPOINT.height,start-CHECKPOINT.height+count)
- return {bytes:Buffer.from(headers.map(h=>h.hex).join(''),'hex'),count:headers.length,state:status}
+ if(!Array.isArray(value?.headers)||status.tip===null||start>status.tip)throw new ApiError(409,'Shared headers are still being prepared.')
+ const headers=value.headers as {height:unknown;hex:unknown}[]
+ if(!headers.length||headers.some((h,i)=>h?.height!==start+i||typeof h.hex!=='string'||!/^[0-9a-f]{160}$/.test(h.hex)))throw Error('Invalid shared header snapshot.')
+ // The retained prefix is never replaced, so a complete batch is immutable.
+ return {bytes:Buffer.from(headers.map(h=>h.hex).join(''),'hex'),count:headers.length,state:status,cacheable:headers.length===count}
 }
 async function promote(db:PoolClient,snapshot:HeaderSnapshot,detail?:object){
  await db.query('BEGIN')

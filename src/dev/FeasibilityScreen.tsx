@@ -12,7 +12,7 @@ import { SigningExperimentPanel } from './SigningExperimentPanel.tsx'
 
 export function FeasibilityScreen(): React.JSX.Element {
   return (
-    <main className="development-page">
+    <main id="main" className="development-page">
       <p className="eyebrow">DEVELOPMENT ONLY / WALLET EXPERIMENTS</p>
       <section aria-labelledby="development-heading">
         <p className="eyebrow">THE FOUNDATION / REAL EVIDENCE COMES NEXT</p>

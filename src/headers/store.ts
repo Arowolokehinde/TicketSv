@@ -1,4 +1,5 @@
 import { validateSnapshot, snapshotParent, type HeaderSnapshot } from './validate.ts'
+import {keepOfflineData} from '../offline/persist.ts'
 import { CHECKPOINT, validHeaderHeight } from './checkpoint.ts'
 export const HEADER_DB='counterfoil-spv-experiment-v1'
 const CHUNK_SIZE=512
@@ -58,7 +59,7 @@ export async function loadSnapshotForRecheck():Promise<{snapshot:HeaderSnapshot|
  catch{return {snapshot:undefined,expected}}
 }
 export async function saveSnapshot(value:HeaderSnapshot,signal?:AbortSignal,expected?:SnapshotExpectation):Promise<void>{
- const snapshot=validateSnapshot(value);signal?.throwIfAborted();const db=await open()
+ const snapshot=validateSnapshot(value);signal?.throwIfAborted();void keepOfflineData();const db=await open()
  return new Promise((resolve,reject)=>{
   const tx=db.transaction(['snapshots','chunks'],'readwrite'),store=tx.objectStore('snapshots'),chunks=tx.objectStore('chunks')
   let conflict=false

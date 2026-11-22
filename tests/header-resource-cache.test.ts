@@ -13,7 +13,7 @@ it('bounds retained bytes and never caches failures or an aborted result',async(
  await cache.read('a',100,signal,load);await cache.read('b',100,signal,load);await cache.read('a',100,signal,load)
  expect(load).toHaveBeenCalledTimes(3)
  const bad=vi.fn(async()=>{throw Error('temporary outage')})
- await expect(cache.read('bad',100,signal,bad)).rejects.toThrow();await expect(cache.read('bad',100,signal,bad)).rejects.toThrow();expect(bad).toHaveBeenCalledTimes(2)
+ await expect(cache.read('bad',100,signal,bad)).rejects.toThrow('temporary outage');await expect(cache.read('bad',100,signal,bad)).rejects.toThrow('temporary outage');expect(bad).toHaveBeenCalledTimes(2)
  const abort=new AbortController()
  await expect(cache.read('cancel',100,abort.signal,async()=>{abort.abort(Error('cancel'));return new Uint8Array([1])})).rejects.toThrow('cancel')
  const replacement=vi.fn(async()=>new Uint8Array([2]))

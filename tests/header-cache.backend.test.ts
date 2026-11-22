@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { Pool } from 'pg'
+import express from 'express'
+import { headerRoutes } from '../server/header-routes.ts'
 import { migrate } from '../server/database.ts'
 import { queueHeaders, readHeaderCache, collectHeadersTick, cachedHeaderRange, readHeaderWorkState } from '../server/header-cache.ts'
 import { HeaderConflict } from '../server/header-sources.ts'
@@ -9,7 +11,8 @@ import b from './fixtures/headers/woc-1762325.json' with { type: 'json' }
 const records=[a,b].map(h=>parseProviderHeader(h,'whatsonchain',h.height))
 describe.skipIf(!process.env.TEST_DATABASE_URL)('shared PostgreSQL headers',()=>{
  let pool:Pool
- beforeAll(async()=>{pool=new Pool({connectionString:process.env.TEST_DATABASE_URL});await migrate(pool)})
+ // Other backend suites share this database; these tests start from an empty shared cache.
+ beforeAll(async()=>{pool=new Pool({connectionString:process.env.TEST_DATABASE_URL});await migrate(pool);await pool.query('TRUNCATE header_cache,header_cache_audit')})
  afterAll(async()=>{await pool?.end()})
  it('backfills progress metadata without replacing an existing accepted snapshot',async()=>{
   await queueHeaders(pool,a.height)
@@ -23,7 +26,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('shared PostgreSQL headers',()=>
   expect(after.snapshot).toEqual(before);expect(after.tip_height).toBe(a.height)
  })
  it('shares a monotonic target and collects once under concurrent workers',async()=>{
-  await expect(queueHeaders(pool,Number.MAX_SAFE_INTEGER)).rejects.toThrow()
+  await expect(queueHeaders(pool,Number.MAX_SAFE_INTEGER)).rejects.toThrow('Invalid required header height.')
   await Promise.all([queueHeaders(pool,b.height),queueHeaders(pool,a.height)])
   expect((await readHeaderCache(pool)).target).toBe(b.height)
   let entered!:()=>void,release!:()=>void,calls=0
@@ -36,7 +39,18 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('shared PostgreSQL headers',()=>
   const state=await readHeaderCache(pool);expect(state.tip).toBe(b.height);expect(state.state).toBe('ready')
   const range=await cachedHeaderRange(pool,a.height,2)
   expect(Buffer.from(range.bytes).toString('hex')).toBe(records.map(h=>h.hex).join(''))
-  await expect(cachedHeaderRange(pool,a.height,513)).rejects.toThrow()
+  const seen:unknown[]=[],spy={query:(...args:Parameters<Pool['query']>)=>(pool.query as (...a:unknown[])=>Promise<{rows:unknown[]}>)(...args).then(r=>{seen.push(...r.rows);return r})} as unknown as Pool
+  const slice=await cachedHeaderRange(spy,b.height,1)
+  expect(Buffer.from(slice.bytes).toString('hex')).toBe(records[1].hex)
+  expect(seen.some(row=>row&&typeof row==='object'&&'snapshot' in row)).toBe(false)
+  expect([(await cachedHeaderRange(pool,a.height,2)).cacheable,(await cachedHeaderRange(pool,b.height,2)).cacheable]).toEqual([true,false])
+  const app=express();headerRoutes(app,pool);const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r))
+  try{
+   const url=`http://127.0.0.1:${(server.address() as {port:number}).port}/api/headers/range`
+   expect((await fetch(`${url}?start=${a.height}&count=2`)).headers.get('cache-control')).toMatch(/public.*s-maxage=\d+/)
+   expect((await fetch(`${url}?start=${b.height}&count=2`)).headers.get('cache-control')).toBe('no-store')
+  }finally{await new Promise(r=>server.close(r))}
+  await expect(cachedHeaderRange(pool,a.height,513)).rejects.toThrow('Invalid header batch range.')
  })
  it('rechecks a ready boundary and blocks a changed upstream history',async()=>{
   let calls=0
@@ -76,7 +90,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('shared PostgreSQL headers',()=>
   const {reviewBlockedHeaders}=await import('../server/header-cache.ts')
   // Use the same public two-header fixture and a deliberately blocked cache.
   await pool.query("UPDATE header_cache SET target=$1,state='blocked',error='recorded source discrepancy'",[b.height])
-  await expect(reviewBlockedHeaders(pool,new AbortController().signal,async()=>[{...records[0],hash:'00'.repeat(32)},records[1]])).rejects.toThrow()
+  await expect(reviewBlockedHeaders(pool,new AbortController().signal,async()=>[{...records[0],hash:'00'.repeat(32)},records[1]])).rejects.toThrow('Stored header hash mismatch')
   expect((await readHeaderCache(pool)).state).toBe('blocked')
   expect((await readHeaderCache(pool)).error).toBe('recorded source discrepancy')
   const result=await reviewBlockedHeaders(pool,new AbortController().signal,async()=>records)

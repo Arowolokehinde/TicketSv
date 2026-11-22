@@ -3,6 +3,7 @@ import {Pool} from 'pg'
 import {ProtoWallet,type WalletInterface} from '@bsv/sdk'
 import {attachDatabasePool,waitUntil} from '@vercel/functions'
 import {createApp} from '../server/app.ts'
+import {handlePoolErrors} from '../server/database.ts'
 import {hostedConfig} from '../server/hosted-config.ts'
 import {PostgresSessionManager} from '../server/hosted-sessions.ts'
 import {hostedHeaderResumer} from '../server/hosted-headers.ts'
@@ -12,11 +13,13 @@ function initialize(){
  return (async()=>{
   const config=hostedConfig(process.env)
   const pool=new Pool({connectionString:config.connectionString,max:4,connectionTimeoutMillis:8000,idleTimeoutMillis:5000,statement_timeout:10_000})
-  pool.on('error',()=>console.error('Hosted PostgreSQL idle connection failed'))
+  handlePoolErrors(pool)
   attachDatabasePool(pool)
   try{
-   if(!(await pool.query('SELECT 1 FROM ticketsv_migrations WHERE version=8')).rowCount)throw Error('Apply TicketSV migration 008 before deployment')
-   return createApp({pool,wallet:new ProtoWallet(config.key) as WalletInterface,origins:()=>config.origins,
+   if(!(await pool.query('SELECT 1 FROM ticketsv_migrations WHERE version=9')).rowCount)throw Error('Apply TicketSV migration 009 before deployment')
+   // Vercel overwrites x-forwarded-for with the client IP and forwards no external
+   // IPs, so exactly one trusted hop gives each client its own login limit.
+   return createApp({pool,wallet:new ProtoWallet(config.key) as WalletInterface,origins:()=>config.origins,trustProxy:1,
     sessionManager:new PostgresSessionManager(pool),resumeHeaders:hostedHeaderResumer(pool,waitUntil)})
   }catch(error){await pool.end();throw error}
  })()

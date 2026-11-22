@@ -1,13 +1,16 @@
 import { expect, test, type Page } from '@playwright/test'
 import { accountApi } from './helpers/account-api.ts'
-test.beforeEach(async ({ context }) => { await accountApi(context) })
+let api: Awaited<ReturnType<typeof accountApi>>
+test.beforeEach(async ({ context }) => { api = await accountApi(context) })
 
 async function fillEvent(page: Page, name = 'Harbour Nights') {
   await page.getByLabel('Event name', { exact: true }).fill(name)
   await page.getByLabel('Description (optional)').fill('An evening of live music by the water.')
   await page.getByLabel('Event date').fill('2027-06-12')
   await page.getByLabel('Start time').fill('19:30')
-  await page.getByLabel('Timezone').fill('Africa/Lagos')
+  // The timezone is a searchable picker: typing searches, choosing sets it.
+  await page.getByLabel('Timezone').fill('Lagos')
+  await page.getByRole('option', { name: 'Africa / Lagos' }).click()
   await page.getByLabel('Venue name').fill('Harbour Hall')
   await page.getByLabel('Venue address').fill('14 Marina Road, Lagos')
 }
@@ -18,29 +21,49 @@ test('create and edit an account event with stable ID across reload, without wal
     if (!request.url().startsWith('blob:') && new URL(request.url()).origin !== new URL(baseURL!).origin) outside.push(request.url())
   })
   await page.goto('/venue')
-  await page.getByRole('button', { name: 'Create event', exact: true }).click()
   await fillEvent(page)
   await expect(page.getByRole('region', { name: 'Event preview' })).toContainText('Harbour Nights')
   await page.getByRole('button', { name: 'Save draft', exact: true }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Draft saved' })).toBeVisible()
-  const id = await page.locator('.event-id').textContent()
+  // The editor no longer shows the ID; the saved record proves an edit keeps it.
+  const ids = [...api.records.keys()]
+  expect(ids).toHaveLength(1)
   await page.reload()
   await page.getByRole('button', { name: 'Edit Harbour Nights', exact: true }).click()
   await expect(page.getByLabel('Start time')).toHaveValue('19:30')
-  await expect(page.getByLabel('Timezone')).toHaveValue('Africa/Lagos')
+  await expect(page.getByLabel('Timezone')).toHaveValue('Africa / Lagos')
   await page.getByLabel('Event name', { exact: true }).fill('Harbour Nights Live')
   await page.getByRole('button', { name: 'Save draft', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Harbour Nights Live', exact: true })).toBeVisible()
-  expect(await page.locator('.event-id').textContent()).toBe(id)
+  expect([...api.records.keys()]).toEqual(ids)
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Harbour Nights Live', exact: true })).toBeVisible()
   expect(outside).toEqual([])
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
 })
 
+test('start time picks quarter hours and typed times', async ({ page }) => {
+  await page.goto('/venue')
+  const field = page.getByRole('combobox', { name: 'Start time', exact: true })
+  await field.click()
+  const times = page.getByRole('listbox', { name: 'Times', exact: true })
+  await expect(times.getByRole('option', { name: '18:00', exact: true })).toBeVisible()
+  await field.fill('7pm')
+  await field.press('Enter')
+  await expect(field).toHaveValue('19:00')
+  await expect(times).toBeHidden()
+  await field.press('ArrowDown')
+  await field.press('ArrowDown')
+  await field.press('Enter')
+  await expect(field).toHaveValue('19:15')
+  await field.fill('abc')
+  await expect(times.getByText('No matching times.')).toBeVisible()
+  await page.getByLabel('Venue name').click()
+  await expect(field).toHaveValue('19:15')
+})
+
 test('invalid fields stay editable; cancelling preserves the saved event', async ({ page }) => {
   await page.goto('/venue')
-  await page.getByRole('button', { name: 'Create event', exact: true }).click()
   await fillEvent(page)
   await page.getByLabel('Event name', { exact: true }).fill('   ')
   await page.getByLabel('Timezone').fill('not/a-zone')
@@ -59,7 +82,6 @@ test('invalid fields stay editable; cancelling preserves the saved event', async
 
 test('cover is saved with the event and unsafe image types are rejected', async ({ page }) => {
   await page.goto('/venue')
-  await page.getByRole('button', { name: 'Create event', exact: true }).click()
   await fillEvent(page)
   await page.getByLabel('Event image (optional)').setInputFiles({ name: 'bad.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg/>') })
   await expect(page.getByRole('alert')).toContainText('PNG, JPEG or WebP')
@@ -91,7 +113,6 @@ test('cover is saved with the event and unsafe image types are rejected', async 
 
 test('failed API save leaves the form intact and never claims success', async ({ page }) => {
   await page.goto('/venue')
-  await page.getByRole('button', { name: 'Create event', exact: true }).click()
   await fillEvent(page)
   await page.route('**/api/events', route => route.fulfill({ status: 503, json: { error: 'The draft could not be saved.' } }))
   await page.getByRole('button', { name: 'Save draft', exact: true }).click()
@@ -102,12 +123,11 @@ test('failed API save leaves the form intact and never claims success', async ({
 
 test('a stale editor cannot overwrite another tab’s saved changes', async ({ page, context }) => {
   await page.goto('/venue')
-  await page.getByRole('button', { name: 'Create event', exact: true }).click()
   await fillEvent(page)
   await page.getByRole('button', { name: 'Save draft', exact: true }).click()
   await page.getByRole('button', { name: 'Edit Harbour Nights', exact: true }).click()
   const second = await context.newPage()
-  await second.goto('/venue')
+  await second.goto('/venue/my-events')
   await second.getByRole('button', { name: 'Edit Harbour Nights', exact: true }).click()
   await second.getByLabel('Event name', { exact: true }).fill('Newer event title')
   await second.getByRole('button', { name: 'Save draft', exact: true }).click()
@@ -128,7 +148,7 @@ test('a late edit response cannot replace the newer selected event', async ({ pa
   const held = new Promise<void>(resolve => { release = resolve })
   const pending = new Promise<void>(resolve => { started = resolve })
   await page.route('**/api/events/a', async route => { started(); await held; await route.fulfill({ json: fixture.records.get('a') }) })
-  await page.goto('/venue')
+  await page.goto('/venue/my-events')
   await page.getByRole('button', { name: 'Edit Event A', exact: true }).click()
   await pending
   await page.getByRole('button', { name: 'Edit Event B', exact: true }).click()

@@ -22,7 +22,7 @@ it('checks imported evidence against independently selected trust and buyer inte
  expect((await verifyReopeningEvidence(wrongTrust,undefined)).checks.find(c=>c.name==='issuer')?.status).toBe('fail')
  const wrongBuyer=structuredClone(record.buyer!);wrongBuyer.recipient.publicKey=record.trusted
  expect((await verifyReopeningEvidence(readReopeningEvidence({...value,buyer:wrongBuyer}),undefined)).checks.find(c=>c.name==='recipient')?.status).toBe('fail')
- expect(()=>readReopeningEvidence({...value,buyer:undefined})).toThrow()
+ expect(()=>readReopeningEvidence({...value,buyer:undefined})).toThrow('Ticket envelope exceeds 4 MiB limit')
 })
 it('checks the receiving key from imported evidence without constructing a wallet journal or transaction',async()=>{
  const {record,wallet}=await fixture(),create=vi.spyOn(wallet,'createAction')
@@ -31,7 +31,7 @@ it('checks the receiving key from imported evidence without constructing a walle
  expect(result.publicKey).toBe(record.buyer!.recipient.publicKey)
  expect(create).not.toHaveBeenCalled()
  const signature=vi.spyOn(wallet,'createSignature')
- await expect(checkEvidenceKey(async()=>wallet,{...evidence,trusted:record.buyer!.recipient.publicKey},new AbortController().signal)).rejects.toThrow()
+ await expect(checkEvidenceKey(async()=>wallet,{...evidence,trusted:record.buyer!.recipient.publicKey},new AbortController().signal)).rejects.toThrow('Ticket was not signed by the trusted venue identity')
  expect(signature).not.toHaveBeenCalled()
 })
 it('rechecks stored recipient and scripts offline, leaving missing headers incomplete',async()=>{
@@ -43,7 +43,7 @@ it('refuses uncertain journal outcomes and does not trust the package as its own
  await expect(verifySavedTransfer({...record,attempt:{...record.attempt,status:'pending'}},undefined)).rejects.toThrow(/completed transfer/)
  const wrong=structuredClone(record);wrong.buyer!.requestId='different'
  // The codec or recipient check must reject altered independently stored intent.
- await expect(verifySavedTransfer(wrong,undefined)).rejects.toThrow()
+ await expect(verifySavedTransfer(wrong,undefined)).rejects.toThrow('Invalid ticket package or receiving request')
 })
 it('proves fresh receiving-key access with real signatures, without creating a transaction',async()=>{
  const {wallet,record}=await fixture();const signature=vi.spyOn(wallet,'createSignature'),create=vi.spyOn(wallet,'createAction')

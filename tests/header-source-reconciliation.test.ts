@@ -26,13 +26,13 @@ it('resolves a height-index orphan only through the agreed child and exact hash 
  expect(get).toHaveBeenCalledWith(expect.stringContaining('/header/hash/'+b.hash),expect.anything())
 })
 it('refuses a differing batch tip and refuses wrong-height or wrong-byte hash responses',async()=>{
- await expect(collectHeaderRange(a.height,3,new AbortController().signal,sources(correct,true))).rejects.toThrow()
+ await expect(collectHeaderRange(a.height,3,new AbortController().signal,sources(correct,true))).rejects.toThrow('Header sources disagree without a bounded common descendant.')
  for(const lookup of [orphan,{...correct,value:{...correct.value,height:b.height+1}},{...correct,value:{...correct.value,nonce:0}}]){
   await expect(collectHeaderRange(a.height,3,new AbortController().signal,sources(lookup))).rejects.toThrow()
  }
 })
 it('keeps unresolved and unavailable hash lookups blocked',async()=>{
- await expect(collectHeaderRange(a.height,3,new AbortController().signal,sources({status:'error'}))).rejects.toThrow()
+ await expect(collectHeaderRange(a.height,3,new AbortController().signal,sources({status:'error'}))).rejects.toThrow('Linked header lookup failed.')
 })
 function laggingSources(chain=bytes(headers)){
  return vi.fn(async(input)=>{
@@ -71,7 +71,7 @@ it('reuses bulk resources across successful collections but still fetches Chaint
 })
 it('discards resource reuse after a source conflict so the next attempt reads fresh bytes',async()=>{
  const get=sources(correct,true)
- for(let i=0;i<2;i++)await expect(collectHeaderRange(a.height,3,new AbortController().signal,get)).rejects.toThrow()
+ for(let i=0;i<2;i++)await expect(collectHeaderRange(a.height,3,new AbortController().signal,get)).rejects.toThrow('Header sources disagree without a bounded common descendant.')
  const calls=(get as ReturnType<typeof vi.fn>).mock.calls.map(([url])=>String(url))
  expect(calls.filter(url=>url.endsWith('_headers.bin'))).toHaveLength(2)
 })

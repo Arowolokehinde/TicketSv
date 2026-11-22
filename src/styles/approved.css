@@ -1,4 +1,4 @@
-/* Counterfoil — an editorial, physical-ticket visual study. No remote assets. */
+/* TicketSV (originally designed as "Counterfoil"): an editorial, physical-ticket visual study. No remote assets. */
 :root{--ink:#292a22;--ink2:#55574a;--ink3:#737467;--line:#d0cdbd;--bg:#efecdf;--card:#faf8ed;--blue:#6d382c;--blue-bg:#f1e4d3;--violet:#6e5667;--violet-bg:#eee5eb;--green:#355844;--green-bg:#e6ecda;--teal:#476463;--teal-bg:#e4ebe3;--amber:#80500e;--amber-bg:#f3e8c6;--red:#a03227;--red-bg:#f5dfd5;--gray:#626357;--gray-bg:#e5e3d6;--radius:2px;--acid:#dce68b;--wine:#722f2e;font-family:Arial,Helvetica,sans-serif}
 button,a,summary{touch-action:manipulation}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--wine);outline-offset:4px}
 .strip{background:#e8e6d7;flex-wrap:wrap;position:relative;color:#535749;font:9px/1.4 monospace;min-height:33px}.strip>div{padding:8px 10px;white-space:normal;border-color:#d2d1be}.strip .sub{cursor:pointer}.conn.off{background:#343b2d;color:#e3e7b9}.conn.on{background:#dde4c8;color:#355844}.dot{width:5px;height:5px}
@@ -30,7 +30,7 @@ input.f{background:#f5f3e5;border-color:#a7ad91;border-radius:0;padding:12px;fon
 .v-blue{background:#f1e4d3;border-color:#cfbda4;border-left-color:#6d382c}.v-blue .ic{background:#6d382c}.v-blue h2{color:#613627}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 
-/* Ticket-holder home: shared Counterfoil palette, separate workspaces. */
+/* Ticket-holder home: shared TicketSV palette, separate workspaces. */
 .rail a[aria-disabled=true]{opacity:.45;cursor:not-allowed}
 a.btn{text-decoration:none}.rail-note{font:italic 16px/1.5 Georgia,serif;color:var(--wine);border-top:1px dashed #b5b99e;margin:34px 8px 0;padding-top:18px}.review-entries{padding-bottom:15px;border-bottom:1px solid #4b4e40}.review-entries a{color:var(--acid)!important}
 .home-intro{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;margin:-8px 0 25px}.home-intro>p{font:italic 19px/1.4 Georgia,serif;color:var(--ink2);margin:0}.home-actions{display:flex;gap:10px;flex-wrap:wrap}

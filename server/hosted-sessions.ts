@@ -3,8 +3,10 @@ import type {Pool, PoolClient} from 'pg'
 import {CHALLENGE_MS} from './auth.ts'
 
 type Options={now?:()=>number;maxSessions?:number;maxMessageNonces?:number;maxInitialNonces?:number}
-// All writes use a transaction-scoped lock, including capacity checks and replay
-// claims. This works across function instances and with transaction poolers.
+// Each write holds a transaction-scoped lock for its own session or identity, so
+// replay claims stay exact across function instances and transaction poolers
+// while unrelated sign-ins proceed in parallel. Global capacity caps are soft:
+// concurrent writers can overshoot them by at most their own number.
 // Nonce rows survive session updates and disappear only when that session ends.
 export class PostgresSessionManager implements AsyncSessionManager {
  private readonly pool:Pool
@@ -19,10 +21,10 @@ export class PostgresSessionManager implements AsyncSessionManager {
  }
  private time(){const n=this.now();if(!Number.isSafeInteger(n)||n<0)throw Error('Invalid session clock');return n}
  private text(value:unknown){if(typeof value!=='string'||!value.length||value.length>512||value.includes('\0'))throw Error('Invalid session identifier');return value}
- private async write<T>(operation:(db:PoolClient,now:number)=>Promise<T>):Promise<T>{
+ private async write<T>(lock:string,operation:(db:PoolClient,now:number)=>Promise<T>):Promise<T>{
   const db=await this.pool.connect()
   try{
-   await db.query('BEGIN');await db.query('SELECT pg_advisory_xact_lock(84723521)')
+   await db.query('BEGIN');await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,84723521))',[lock])
    const now=this.time()
    await db.query('DELETE FROM auth_peer_sessions WHERE expires_at<=$1',[now])
    await db.query('DELETE FROM auth_initial_nonces WHERE claimed_at<=$1',[now-CHALLENGE_MS])
@@ -35,7 +37,7 @@ export class PostgresSessionManager implements AsyncSessionManager {
   if(session.peerIdentityKey!==undefined)this.text(session.peerIdentityKey)
   const serialized=JSON.stringify(session)
   if(Buffer.byteLength(serialized)>32768)throw Error('Session state exceeds storage limit')
-  await this.write(async(db,now)=>{
+  await this.write(`session:${nonce}`,async(db,now)=>{
    if(session.lastUpdate<=now-CHALLENGE_MS||session.lastUpdate>now+30_000)throw Error('Session expired or has an invalid timestamp')
    const previous=(await db.query('SELECT identity_key FROM auth_peer_sessions WHERE session_nonce=$1',[nonce])).rows[0]
    if(previous?.identity_key&&previous.identity_key!==session.peerIdentityKey)throw Error('Session identity cannot change')
@@ -58,11 +60,11 @@ export class PostgresSessionManager implements AsyncSessionManager {
  async removeSession(session:PeerSession):Promise<void>{
   if(session.sessionNonce===undefined)return
   const nonce=this.text(session.sessionNonce)
-  await this.write(async db=>{await db.query('DELETE FROM auth_peer_sessions WHERE session_nonce=$1',[nonce])})
+  await this.write(`session:${nonce}`,async db=>{await db.query('DELETE FROM auth_peer_sessions WHERE session_nonce=$1',[nonce])})
  }
  async claimMessageNonce(sessionNonce:string,messageNonce:string):Promise<boolean>{
   this.text(sessionNonce);this.text(messageNonce)
-  return this.write(async db=>{
+  return this.write(`session:${sessionNonce}`,async db=>{
    if(!(await db.query('SELECT 1 FROM auth_peer_sessions WHERE session_nonce=$1',[sessionNonce])).rowCount)throw Error('Authentication session not found')
    if((await db.query('SELECT 1 FROM auth_message_nonces WHERE session_nonce=$1 AND nonce=$2',[sessionNonce,messageNonce])).rowCount)return false
    if(Number((await db.query('SELECT count(*) AS n FROM auth_message_nonces WHERE session_nonce=$1',[sessionNonce])).rows[0].n)>=this.maxMessageNonces)throw Error('Session message nonce capacity exhausted')
@@ -71,7 +73,7 @@ export class PostgresSessionManager implements AsyncSessionManager {
  }
  async claimInitialRequestNonce(identityKey:string,initialNonce:string):Promise<boolean>{
   this.text(identityKey);this.text(initialNonce)
-  return this.write(async(db,now)=>{
+  return this.write(`identity:${identityKey}`,async(db,now)=>{
    if((await db.query('SELECT 1 FROM auth_initial_nonces WHERE identity_key=$1 AND nonce=$2',[identityKey,initialNonce])).rowCount)return false
    // Match the SDK's bounded window for unsigned initial requests: evict the
    // oldest claim rather than letting arbitrary identities exhaust all login.

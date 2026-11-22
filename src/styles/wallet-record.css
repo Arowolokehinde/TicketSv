@@ -1,0 +1,22 @@
+.wallet-record-panel .wallet-record-heading{display:flex;align-items:flex-start;gap:16px;margin:16px 0 20px}
+.wallet-record-heading .wallet-record-symbol{display:grid;place-items:center;flex:0 0 44px;height:44px;border-radius:14px;background:#e9eddb;color:#667548;font-size:24px}
+.wallet-record-symbol svg{width:24px;height:24px}
+.wallet-record-symbol.is-present{background:#dfecc8;color:#405c2d}
+.wallet-record-panel .wallet-record-heading h3{margin:0 0 8px;font-size:clamp(23px,2vw,29px);line-height:1.25}
+.wallet-record-heading p{margin:0;color:#69715e;max-width:650px;font-size:15px;line-height:1.6}
+.wallet-record-statuses{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.wallet-record-badge{display:inline-block;border:1px solid #dfe3d4;background:#fffef9;border-radius:8px;padding:8px 12px;font-size:13px;color:#616954}
+.wallet-record-badge.is-present{background:#e8f0d9;border-color:#d8e5c1;color:#3d592b}
+.wallet-record-consent{max-width:760px;margin:20px 0;padding:20px;background:#fffef9;border:1px solid #e1e5d6;border-radius:14px}
+.wallet-record-consent>p{font-size:14px;margin-top:0;line-height:1.6;color:#626b56}
+.wallet-record-consent .check-row{display:flex;gap:10px;align-items:flex-start;line-height:1.6;font-size:15px;margin:16px 0}
+.wallet-record-consent input{flex:0 0 auto;margin:5px 0 0;accent-color:#79312e;width:18px;height:18px}
+.wallet-record-consent .btn{display:inline-flex;align-items:center;justify-content:center;gap:14px}
+.wallet-record-attention{font-size:15px;color:#79572d;line-height:1.6;max-width:760px}
+.wallet-record-details{border-top:1px solid #e0e5d4;margin-top:16px;padding-top:14px;color:#68715c;font-size:14px}
+.wallet-record-details summary{cursor:pointer;font-weight:500}
+.wallet-record-details p{line-height:1.6}
+.wallet-record-details dl{display:grid;gap:12px;max-width:850px}
+.wallet-record-details dl>div{display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px}
+.wallet-record-details dd{margin:0;overflow-wrap:anywhere}
+@media(max-width:480px){.wallet-record-panel .wallet-record-heading{gap:12px}.wallet-record-heading .wallet-record-symbol{flex-basis:36px;height:36px;border-radius:11px}.wallet-record-consent{padding:16px}.wallet-record-consent .btn{width:100%}.wallet-record-details dl>div{grid-template-columns:1fr;gap:4px}}

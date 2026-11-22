@@ -15,9 +15,9 @@ it('binds a receiving signature to attendee, event, publication, venue and websi
  const proof = await prepareAttendeeRequest(wallet, context, crypto.randomUUID())
  expect(() => verifyRequestProof(proof, context)).not.toThrow()
  for (const altered of [{ eventId: crypto.randomUUID() }, { revision: 2 }, { venue: owner }, { attendee: venue }, { origin: 'http://localhost:9999' }]) {
-  expect(() => verifyRequestProof(proof, { ...context, ...altered })).toThrow()
+  expect(() => verifyRequestProof(proof, { ...context, ...altered })).toThrow('Receiving request context changed.')
  }
- expect(() => verifyRequestProof({ ...proof, signature: 'AAAA' }, context)).toThrow()
+ expect(() => verifyRequestProof({ ...proof, signature: 'AAAA' }, context)).toThrow('Signature DER must start with 0x30')
  const organiser = syntheticSigningWallet(), create = vi.spyOn(organiser, 'createAction')
  const pkg = await issueAttendeeTicket(organiser, venue, context.eventId, crypto.randomUUID(), proof, async () => {})
  expect(() => verifyRecipient(pkg, proof.request)).not.toThrow()

@@ -22,7 +22,7 @@ it('commits the attempt before dispatch and retains the exact signed bytes',asyn
  const r=await submitReviewedTransfer(t.review,undefined,new AbortController().signal,false,t.deps)
  expect(r.attempts[0].outcome).toBe('response');expect(r.lastStatus?.txStatus).toBe('SEEN_ON_NETWORK');expect(r.rawHex).toBe(t.review.rawHex)
  expect(t.post).toHaveBeenCalledExactlyOnceWith(t.review.efHex,t.review.txid,expect.any(AbortSignal))
- await expect(submitReviewedTransfer(t.review,r.revision,new AbortController().signal,true,t.deps)).rejects.toThrow();expect(t.post).toHaveBeenCalledTimes(1)
+ await expect(submitReviewedTransfer(t.review,r.revision,new AbortController().signal,true,t.deps)).rejects.toThrow('Earlier provider status SEEN_ON_NETWORK blocks retry; manual review required');expect(t.post).toHaveBeenCalledTimes(1)
 })
 it('a lost response remains unknown; explicit GET reconciliation and acknowledgement precede identical retries',async()=>{
  const t=await setup();t.post.mockRejectedValue(new Error('lost response'))
@@ -40,7 +40,7 @@ it('storage failure, stale evidence and cancellation before dispatch do not subm
  const t=await setup(),c=new AbortController()
  await expect(submitReviewedTransfer(t.review,undefined,c.signal,false,{...t.deps,claim:async()=>{throw new Error('storage failed')}})).rejects.toThrow(/storage/)
  await expect(submitReviewedTransfer({...t.review,rawHex:'00'},undefined,c.signal,false,t.deps)).rejects.toThrow(/changed/)
- c.abort();await expect(submitReviewedTransfer(t.review,undefined,c.signal,false,t.deps)).rejects.toThrow();expect(t.post).not.toHaveBeenCalled()
+ c.abort();await expect(submitReviewedTransfer(t.review,undefined,c.signal,false,t.deps)).rejects.toThrow('This operation was aborted');expect(t.post).not.toHaveBeenCalled()
 })
 it('lost final persistence leaves the pending claim rather than declaring completion',async()=>{
  const t=await setup()
@@ -51,9 +51,9 @@ it('rejects conflicting bodies, malformed stored records and wrong response txid
  const t=await setup();t.post.mockResolvedValue({txid:'00'.repeat(32),txStatus:'MINED',observedAt:new Date().toISOString()})
  const r=await submitReviewedTransfer(t.review,undefined,new AbortController().signal,false,t.deps)
  expect(r.attempts[0].outcome).toBe('unknown')
- expect(()=>readSettlement({...r,rawHex:'00'})).toThrow()
- expect(()=>nextClaim(r,{...t.review,efHex:'00'},r.revision,true)).toThrow()
- expect(()=>readSettlement({...r,provider:'https://other.example'})).toThrow()
+ expect(()=>readSettlement({...r,rawHex:'00'})).toThrow('Stored settlement transaction bytes do not match')
+ expect(()=>nextClaim(r,{...t.review,efHex:'00'},r.revision,true)).toThrow('Reviewed bytes changed')
+ expect(()=>readSettlement({...r,provider:'https://other.example'})).toThrow('Invalid settlement record')
 })
 it('a second tab cannot authorize a retry while the first submission is still pending',async()=>{
  const t=await setup(),pending=nextClaim(undefined,t.review,undefined)

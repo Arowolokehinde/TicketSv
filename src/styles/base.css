@@ -1,4 +1,4 @@
-/* Product primitives ported from the approved Counterfoil design. */
+/* Product primitives ported from the approved TicketSV design (originally named Counterfoil). */
 
 :root{
   --ink:#16191f; --ink2:#4a5160; --ink3:#7b8291; --line:#e2e5ea; --bg:#f6f7f9; --card:#fff;
