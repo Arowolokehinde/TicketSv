@@ -148,11 +148,9 @@ export function ScannerPage(){
   })
   if(mounted.current){setDoorCheck(summary);setAdmissions(await eventAdmissions(setup.review.eventId));setMessage(`Checked ${summary.checked} admitted ticket${summary.checked===1?'':'s'}.`)}
  })}
- return <main className="scanner-page" id="main">
-  <nav className="scanner-nav" aria-label="Scanner navigation"><a href="/scanner" aria-current={!location.pathname.includes('/prepare')?'page':undefined}>Scan ticket</a><a href="/scanner/prepare" aria-current={location.pathname.includes('/prepare')?'page':undefined}>Prepare device</a></nav>
-  <div className="scanner-heading"><div><span className="scanner-eyebrow">TICKETSV / AT THE ENTRANCE</span><h1>Scan a ticket.</h1><p>Check the evidence here. Keep the verification on this device.</p></div><span className="scanner-tag">BSV testnet · POC</span></div>
-  <div className="scanner-layout">
-   <aside className="scanner-setup scanner-panel"><div className="scanner-section-title"><DashboardIcon name="prepare"/><h2>{setup?'This scanner':'Prepare this scanner'}</h2></div>
+ // Step 1 prepares the scanner; once prepared, step 2 (checking) leads and step 1 sits beside it.
+ const aside=<>
+   <aside className="scanner-setup scanner-panel"><span className="scanner-eyebrow scanner-step">{setup?'STEP 1 · PREPARED':'STEP 1 · WHILE ONLINE'}</span><div className="scanner-section-title"><DashboardIcon name="prepare"/><h2>{setup?'This scanner':'Prepare this scanner'}</h2></div>
     {setup&&<>{accessExpires&&<p className="scanner-note">Offline scanner access until {new Date(accessExpires).toLocaleString()}. Refresh preparation online before it expires.</p>}<span className="scanner-eyebrow">SELECTED EVENT</span><h3>{setup.review.event.name}</h3><p>{setup.review.event.venue}</p><dl className="scanner-facts"><div><dt>Saved headers</dt><dd>{headers?`Through ${headers.headers.at(-1)!.height.toLocaleString()}`:'Not saved'}</dd></div><div><dt>Ticket transfers</dt><dd>{spentList?`Checked ${clock(spentList.checkedAt)}, ${spentList.tickets.length} ticket${spentList.tickets.length===1?'':'s'}`:'Not saved (organiser only)'}</dd></div><div><dt>Offline app</dt><dd>{cache==='ready'?'Saved and active':cache==='reload'?'Reload required':cache==='waiting'?'Update waiting':'Preparation required'}</dd></div></dl>
      <details><summary>Reviewed organiser identity</summary><code>{setup.review.venueIdentity}</code><p>Published revision {setup.review.publicationRevision}. Reviewed {new Date(setup.review.reviewedAt).toLocaleString()}.</p></details>
      <div className="actions"><button className="btn" disabled={busy} onClick={refresh}>Refresh preparation</button><button className="btn" disabled={busy} onClick={()=>{setEditing(v=>!v);setResult(undefined);setConsent(false)}}>Change event</button></div>
@@ -164,11 +162,11 @@ export function ScannerPage(){
      {chosen&&<div className="scanner-review"><strong>{chosen.name}</strong><p>{chosen.date} · {chosen.venue}</p><details><summary>Organiser identity from this published event</summary><code>{chosen.venueIdentity}</code></details><p>Confirm this is your intended event and organiser. Publication alone does not prove a real-world identity.</p><label className="scanner-consent"><input type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)}/>I have checked the event and organiser for this scanner.</label><button className="btn primary" aria-label="Save event and prepare offline" disabled={busy||!consent} onClick={prepare}>Save event and prepare offline</button></div>}
     </div>}
    </aside>
-   <section className="scanner-panel scanner-check"><div className="scanner-section-title"><DashboardIcon name="scan"/><h2>Check a ticket</h2></div><p>Scan the holder’s ticket QR or load their updated ticket file.</p>
-    {!setup&&<p className="scanner-note">Prepare an event on this device to enable ticket scanning.</p>}
-    <ExchangeImport label="ticket" disabled={busy||!setup||!loaded} onLoad={importTicket}/>
+ </>
+ const check=<>
+   <section className="scanner-panel scanner-check"><span className="scanner-eyebrow scanner-step">STEP 2 · AT THE DOOR</span><div className="scanner-section-title"><DashboardIcon name="scan"/><h2>Check a ticket</h2></div><p>Scan the holder’s ticket QR or load their updated ticket file.</p>
+    <ExchangeImport label="ticket" scanFirst disabled={busy||!loaded} onLoad={importTicket}/>
     {pkg&&<div className="scanner-loaded"><span className="scanner-eyebrow">LOADED EVIDENCE</span><strong>Ticket {pkg.issuance.ticketId}</strong><code>{pkg.current.txid}.{pkg.current.index}</code><button className="btn primary" aria-label="Verify locally" disabled={busy||!setup} onClick={verify}>Verify locally</button></div>}
-    {result&&<section className={`scanner-result scanner-result-${result.policy}`} aria-live="polite"><span className="scanner-eyebrow">LOCAL RESULT</span><h3>{labels[result.policy]}</h3><ul>{result.verification.checks.map((c,i)=><li key={`${c.name}-${i}`}><strong>{c.name==='recipient'?'Output binding':c.name}: {c.status}</strong><span>{c.reason}</span></li>)}</ul><p>{result.verification.presentedTransferMined?'Presented transfer mining verified against saved headers.':'Presented transfer mining is not verified.'}</p>{evidenceLine(pkg)&&<p>Ticket evidence: {evidenceLine(pkg)}</p>}{result.spend&&<p>{spendLine(result.spend)}</p>}<NetworkLine of={result.verification}/>{result.policy==='incomplete'&&<p>Reconnect and refresh preparation for missing headers, or obtain a ticket file containing complete mining evidence.</p>}{result.policy==='online-check-required'&&<p>This transfer isn't mined yet, so it can't be admitted. The holder must publish it, wait for mining, select Verify mining evidence and show the updated door ticket.</p>}</section>}
     {door&&<div className={`scanner-door scanner-door-${door.kind}`} aria-live="polite">
      {door.kind==='needs-mining'&&<p><strong>Not admitted</strong></p>}
      {door.kind==='transferred'&&<p><strong>Not admitted: this ticket has been transferred to someone else.</strong></p>}
@@ -177,6 +175,7 @@ export function ScannerPage(){
      {door.kind==='admitted'&&<p><strong>Admitted</strong></p>}
      {door.kind==='already-admitted'&&<><p><strong>{`Already admitted at this door at ${clock(door.at)}`}</strong></p>{door.differentCopy&&<p>This is a different copy of the same ticket. It may have been sold twice.</p>}</>}
     </div>}
+    {result&&<section className={`scanner-result scanner-result-${result.policy}`} aria-live="polite"><span className="scanner-eyebrow">LOCAL RESULT</span><h3>{labels[result.policy]}</h3><ul>{result.verification.checks.map((c,i)=><li key={`${c.name}-${i}`}><strong>{c.name==='recipient'?'Output binding':c.name}: {c.status}</strong><span>{c.reason}</span></li>)}</ul><p>{result.verification.presentedTransferMined?'Presented transfer mining verified against saved headers.':'Presented transfer mining is not verified.'}</p>{evidenceLine(pkg)&&<p>Ticket evidence: {evidenceLine(pkg)}</p>}{result.spend&&<p>{spendLine(result.spend)}</p>}<NetworkLine of={result.verification}/>{result.policy==='incomplete'&&<p>Reconnect and refresh preparation for missing headers, or obtain a ticket file containing complete mining evidence.</p>}{result.policy==='online-check-required'&&<p>This transfer isn't mined yet, so it can't be admitted. The holder must publish it, wait for mining, select Verify mining evidence and show the updated door ticket.</p>}</section>}
     {setup&&admissions.length>0&&<section className="scanner-admissions" aria-label="Admitted at this door"><h3>Admitted at this door</h3>
      <ul>{admissions.map(a=><li key={a.id} data-state={a.reconcile?.state??(a.admitted.mined?'admitted':'waiting')}><time>{clock(a.admittedAt)}</time><span>Ticket {a.admitted.pkg.issuance.ticketId.slice(0,8)}</span><strong>{doorState(a)}</strong>
       {a.refused.length>0&&<small>{a.refused.length} other cop{a.refused.length===1?'y':'ies'} refused</small>}
@@ -185,6 +184,11 @@ export function ScannerPage(){
      {doorCheck&&<NetworkLine of={doorCheck}/>}
     </section>}
    </section>
+ </>
+ return <main className="scanner-page" id="main">
+  <div className="handoff-page-heading scanner-heading"><div><span className="handoff-eyebrow"><DashboardIcon name="scan"/>AT THE ENTRANCE</span><h1>Scan a ticket.</h1><p>Prepare once while online. Then check tickets here, with or without internet.</p></div><div className="handoff-heading-symbol" aria-hidden="true"><DashboardIcon name="ticket"/></div></div>
+  <div className={`scanner-layout${setup?'':' scanner-layout-setup'}`}>
+   {setup?<>{check}{aside}</>:<>{aside}<div className="scanner-later"><span className="scanner-eyebrow scanner-step">STEP 2 · AT THE DOOR</span><p>Check tickets here once this scanner is prepared.</p></div></>}
   </div>
   {busy&&<p className="scanner-message" role="status">{message||'Working…'} <button className="btn" onClick={()=>active.current?.abort(Error('Cancelled. Saved progress retained.'))}>Cancel</button></p>}
   {!busy&&message&&<p className="scanner-message" role="status">{message}</p>}{error&&<p className="scanner-error" role="alert">{error}</p>}

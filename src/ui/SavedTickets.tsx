@@ -5,7 +5,17 @@ import { settlementKey, settlementStore, type HandoffSettlement } from '../hando
 import { senderReleaseStore } from '../handoff/release.ts'
 import { fromAttendee } from '../handoff/evidence.ts'
 import type { HandoffTicket, RecipientRecord, SenderRecord } from '../handoff/types.ts'
-import { groupByAccount, handoffNextStep, removalPlan, statusLabel, ticketStatus, type TicketStatus } from '../offline/home.ts'
+import {
+  groupByAccount,
+  handoffNextStep,
+  needsInternet,
+  offlineReadiness,
+  readinessText,
+  removalPlan,
+  statusLabel,
+  ticketStatus,
+  type TicketStatus,
+} from '../offline/home.ts'
 import { offlineStorage } from '../offline/persist.ts'
 import { clearNetworkActivity, readNetworkActivity, subscribeNetworkActivity } from '../network/recorder.ts'
 import { ActivityView } from './OperationPages.tsx'
@@ -25,6 +35,8 @@ const account = (key: string) => (key ? `Account ${key.slice(0, 8)}…${key.slic
 // Steps that continue on the Confirm tab once the transfer has a settlement record.
 const confirmSteps = ['Publish transfer', 'Publication needs review', 'Verify mining', 'Wallet import needs review', 'Add to wallet']
 type Progress = { id: string; name: string; role: 'Sending' | 'Receiving'; step: string; href: string }
+// Tickets this device still holds; a sent ticket can't be shown at the door or sent again.
+const held: TicketStatus[] = ['current', 'received-unmined', 'received', 'in-wallet']
 
 // The offline home. Deliberately outside AuthProvider: everything here is read
 // from records saved on this device, with no session, wallet or network call.
@@ -41,18 +53,21 @@ export function SavedTickets() {
     [selected, setSelected] = useState<SavedTicket>()
   const [report, setReport] = useState<Verification>(),
     [error, setError] = useState(''),
-    [loaded, setLoaded] = useState(false)
+    [loaded, setLoaded] = useState(false),
+    [tip, setTip] = useState<number>(),
+    [online, setOnline] = useState(navigator.onLine)
   const [busy, setBusy] = useState(false),
     [removing, setRemoving] = useState<string>()
   const active = useRef(false),
     mounted = useRef(true)
   async function refresh() {
-    const [saved, rr, ss, tt, kept] = await Promise.all([
+    const [saved, rr, ss, tt, kept, snapshot] = await Promise.all([
       listSavedTickets(location.origin),
       recipientStore.list(),
       senderStore.list(),
       settlementStore.list(),
       offlineStorage(),
+      loadSnapshot().catch(() => undefined),
     ])
     if (mounted.current) {
       setRows(saved)
@@ -60,6 +75,7 @@ export function SavedTickets() {
       setSenders(ss)
       setSettlements(tt)
       setStorage(kept.text)
+      setTip(snapshot?.headers.at(-1)?.height)
       setLoaded(true)
     }
   }
@@ -67,9 +83,14 @@ export function SavedTickets() {
     mounted.current = true
     void refresh().catch(e => setError((e as Error).message))
     const unsubscribe = subscribeNetworkActivity(() => setActivity(readNetworkActivity()))
+    const connection = () => setOnline(navigator.onLine)
+    addEventListener('online', connection)
+    addEventListener('offline', connection)
     return () => {
       mounted.current = false
       unsubscribe()
+      removeEventListener('online', connection)
+      removeEventListener('offline', connection)
     }
   }, [])
   const settlementFor = (ticket: HandoffTicket | undefined) => ticket && settlements.find(s => s.id === settlementKey(ticket))
@@ -81,6 +102,29 @@ export function SavedTickets() {
       sentSettlement: settlementFor(sender?.transfer),
       settlement: received ? settlementFor(ticket) : undefined,
     })
+  }
+  // What a held ticket can do offline: a door line, and a transfer line unless a handoff is under way.
+  function readiness(ticket: HandoffTicket, received: boolean) {
+    if (!held.includes(status(ticket, received))) return undefined
+    const sender = senders.find(s => s.id === sourceKey(ticket))
+    return { ...offlineReadiness(ticket.pkg, sender, tip), sender }
+  }
+  function ready(ticket: HandoffTicket, received: boolean) {
+    const r = readiness(ticket, received)
+    if (!r) return null
+    return (
+      <>
+        <ul className="saved-card-ready" aria-label="Offline readiness">
+          <li data-ready={r.door === 'ready'}>{readinessText.door[r.door]}</li>
+          {r.transfer !== 'busy' && <li data-ready={r.transfer === 'ready'}>{readinessText.transfer[r.transfer]}</li>}
+        </ul>
+        {r.transfer === 'ready' && r.sender && (
+          <a className="btn saved-card-open" href={`/offline/handoff?source=${encodeURIComponent(r.sender.id)}`}>
+            Transfer offline <DashboardIcon name="arrow" />
+          </a>
+        )}
+      </>
+    )
   }
   const progress: Progress[] = [
     ...senders.flatMap(sender => {
@@ -204,6 +248,7 @@ export function SavedTickets() {
     })
   }
   function card(row: SavedTicket) {
+    const door = row.evidence && readiness(fromAttendee(row.evidence), false)?.door === 'ready'
     return (
       <article className={`offline-ticket-card saved-library-card${row.error ? ' saved-library-card-damaged' : ''}`} key={row.id}>
         <div className="saved-card-face">
@@ -230,6 +275,7 @@ export function SavedTickets() {
                   {row.evidence.event.venue}
                 </p>
               </div>
+              {ready(fromAttendee(row.evidence), false)}
               <p className="saved-card-note">Saved {new Date(row.evidence.savedAt).toLocaleString()}</p>
               <details className="saved-card-account">
                 <summary>Saved account</summary>
@@ -244,8 +290,8 @@ export function SavedTickets() {
           )}
           <div className="actions saved-card-actions">
             {row.evidence && (
-              <button className="btn primary" aria-label="Open ticket" disabled={busy} onClick={() => open(row)}>
-                Open ticket <DashboardIcon name="arrow" />
+              <button className="btn primary" aria-label={door ? 'Show door QR' : 'Open ticket'} disabled={busy} onClick={() => open(row)}>
+                {door ? 'Show door QR' : 'Open ticket'} <DashboardIcon name="arrow" />
               </button>
             )}
             <button className="saved-card-remove" disabled={busy} onClick={() => setRemoving(row.id)}>
@@ -295,6 +341,7 @@ export function SavedTickets() {
           <p className="saved-card-evidence">
             <DashboardIcon name="saved" /> Saved on this device
           </p>
+          {ready(row.ticket!, true)}
           <p className="saved-card-note">Saved evidence. Verify again for its current local result.</p>
           <a className="btn primary saved-card-open" href={`/offline/handoff?request=${encodeURIComponent(row.id)}`}>
             Open received ticket <DashboardIcon name="arrow" />
@@ -306,14 +353,26 @@ export function SavedTickets() {
   return (
     <div className="offline-library saved-library">
       <main id="main" className="offline-content">
+        <div className="handoff-page-heading saved-library-heading">
+          <div>
+            <span className="handoff-eyebrow">
+              <DashboardIcon name="saved" />
+              SAVED ON THIS DEVICE
+            </span>
+            <h1>Offline tickets.</h1>
+            <p>Opens without internet or sign-in. Each ticket shows what it can do offline.</p>
+          </div>
+          <div className="handoff-heading-symbol" aria-hidden="true">
+            <DashboardIcon name="ticket" />
+          </div>
+        </div>
         <ReceivedSync onRestored={refresh} />
-        <OfflineBrowserSupport />
         <div className="saved-library-collection">
           <div>
-            <h1>
+            <h2>
               On this device <span>{rows.length + received.length}</span>
-            </h1>
-            <p>Opens without internet or sign-in. Open a ticket to check its saved evidence.</p>
+            </h2>
+            <p>Open a ticket to check its saved evidence.</p>
             {storage && <p className="saved-library-storage">{storage}</p>}
           </div>
           <span className="saved-library-local">
@@ -347,9 +406,12 @@ export function SavedTickets() {
                   <span>
                     {item.role} · <strong>{item.name}</strong>
                   </span>
-                  <a href={item.href}>
-                    {item.step} <DashboardIcon name="arrow" />
-                  </a>
+                  <span className="saved-library-step">
+                    {!online && needsInternet(item.step) && <span className="saved-library-tag">Needs internet</span>}
+                    <a href={item.href}>
+                      {item.step} <DashboardIcon name="arrow" />
+                    </a>
+                  </span>
                 </li>
               ))}
             </ul>
@@ -393,7 +455,7 @@ export function SavedTickets() {
             <button className="btn primary" aria-label="Verify locally" disabled={busy} onClick={verify}>
               Verify locally
             </button>
-            {report?.verdict === 'verified' && report.presentedTransferMined && (
+            {report?.verdict === 'verified' && report.presentedTransferMined && held.includes(status(fromAttendee(selected.evidence), false)) && (
               <TicketQR
                 key={selected.id + selected.evidence.pkg.atomicBeefBase64}
                 pkg={selected.evidence.pkg}
@@ -451,6 +513,7 @@ export function SavedTickets() {
             </p>
           </section>
         )}
+        <OfflineBrowserSupport />
         <details className="wallet-advanced saved-library-activity">
           <summary>Activity on this device</summary>
           <ActivityView activity={activity} onClear={clearNetworkActivity} />

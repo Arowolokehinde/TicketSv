@@ -2,17 +2,17 @@ import type { NextStep } from './receive-steps.ts'
 import type { SenderRecord } from './types.ts'
 
 // What the sender should do next once Prepare is shown. A ticket whose signing ended without a saved
-// transfer can never be signed again on this device, so it must not invite a recipient.
-export type SendNext = { kind: 'invite' } | { kind: 'signed' } | { kind: 'blocked'; outcome: string; reason?: string } | undefined
+// transfer may only be signed again for the same recipient, so it must not invite a new one.
+export type SendNext = { kind: 'invite' } | { kind: 'signed' } | { kind: 'retry'; outcome: string; reason?: string } | undefined
 
 export function sendNext(sender: Pick<SenderRecord, 'signAttempt' | 'transfer'> | undefined, invitationReady: boolean): SendNext {
   if (sender?.transfer) return { kind: 'signed' }
   const attempt = sender?.signAttempt
-  if (attempt) return { kind: 'blocked', outcome: attempt.outcome, ...(attempt.reason ? { reason: attempt.reason } : {}) }
+  if (attempt) return { kind: 'retry', outcome: attempt.outcome, ...(attempt.reason ? { reason: attempt.reason } : {}) }
   return invitationReady ? { kind: 'invite' } : undefined
 }
 
-// The Next box on Prepare and Send. Nothing is suggested while an outcome needs review.
+// The Next box on Prepare and Send. Nothing is suggested while the fee outcome needs review.
 export function transferNext(
   tab: 'prepare' | 'send',
   sender: Pick<SenderRecord, 'fundAttempt' | 'signAttempt' | 'transfer'> | undefined,
@@ -20,7 +20,10 @@ export function transferNext(
   requestLoaded: boolean,
 ): NextStep | undefined {
   const signing = sendNext(sender, invitationReady)
-  if (signing?.kind === 'blocked') return undefined
+  if (signing?.kind === 'retry')
+    return tab === 'send'
+      ? { next: "Retry signing for the same recipient. A different recipient can't be used for this ticket." }
+      : { next: "Signing didn't finish. Continue to Send to retry for the same recipient." }
   if (tab === 'send') {
     if (signing?.kind === 'signed')
       return {

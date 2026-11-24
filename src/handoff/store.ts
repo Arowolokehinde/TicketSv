@@ -32,7 +32,8 @@ function attempt(value: unknown): Attempt | undefined {
     !/^[a-zA-Z0-9-]{1,100}$/.test(a.id) ||
     !['pending', 'complete', 'unknown'].includes(a.outcome as string) ||
     (a.outcome === 'pending' ? a.finishedAt !== undefined : a.finishedAt === undefined) ||
-    (a.reason !== undefined && (a.outcome !== 'unknown' || typeof a.reason !== 'string'))
+    (a.reason !== undefined && (a.outcome !== 'unknown' || typeof a.reason !== 'string')) ||
+    (a.walletAsked !== undefined && typeof a.walletAsked !== 'boolean')
   )
     throw Error('Invalid handoff attempt.')
   return {
@@ -41,7 +42,25 @@ function attempt(value: unknown): Attempt | undefined {
     outcome: a.outcome as Attempt['outcome'],
     ...(a.finishedAt !== undefined ? { finishedAt: date(a.finishedAt) } : {}),
     ...(typeof a.reason === 'string' ? { reason: a.reason.slice(0, 300) } : {}),
+    ...(typeof a.walletAsked === 'boolean' ? { walletAsked: a.walletAsked } : {}),
   }
+}
+// Sign attempts may end in two extra ways, neither of which can sign a second recipient:
+// released, when the wallet was never asked, so nothing can have been signed; or
+// retried, when the wallet may have answered, so the recipient request stays fixed.
+function signTransition(old: SenderRecord, next: SenderRecord): { released: boolean } {
+  const before = old.signAttempt,
+    after = next.signAttempt
+  if (before?.outcome === 'pending' && before.walletAsked === false && !after) {
+    if (next.transfer) throw Error('A released signing claim cannot keep a transfer.')
+    return { released: true }
+  }
+  const retried =
+    !!before && !!after && after.id !== before.id && before.outcome !== 'complete' && before.walletAsked !== false &&
+    after.outcome === 'pending' && after.walletAsked === false
+  if (!retried) monotonic(before, after)
+  if (before?.walletAsked && after?.id === before.id && !after.walletAsked) throw Error('A wallet request cannot be unrecorded.')
+  return { released: false }
 }
 function monotonic(old: Attempt | undefined, next: Attempt | undefined): void {
   if (!old) {
@@ -166,8 +185,8 @@ export function readSender(value: unknown, previous?: SenderRecord): SenderRecor
     fixed(old.id, out.id, 'sender identity')
     fixed(stableTicket(old.ticket), stableTicket(ticket), 'source ticket')
     monotonic(old.fundAttempt, out.fundAttempt)
-    monotonic(old.signAttempt, out.signAttempt)
-    if (old.request) fixed(old.request, out.request, 'recipient request')
+    const { released } = signTransition(old, out)
+    if (old.request && !released) fixed(old.request, out.request, 'recipient request')
     if (old.transfer) {
       if (!out.transfer) throw Error('Saved transfer cannot be removed.')
       fixed(stableTicket(old.transfer), stableTicket(out.transfer), 'signed transfer')

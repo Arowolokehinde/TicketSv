@@ -244,7 +244,9 @@ it('signs exactly the ticket and fee input offline with real signatures and one 
     let count = 0
     f.wallet.createSignature = async args => {
       count++
-      expect((await f.store.load(f.record.id))?.signAttempt?.outcome).toBe('pending')
+      const saved = (await f.store.load(f.record.id))?.signAttempt
+      expect(saved?.outcome).toBe('pending')
+      expect(saved?.walletAsked).toBe(true)
       return sign(args)
     }
     const result = await signHandoff(f.record, f.request, f.wallet, snapshot, signal(), f.store)
@@ -263,19 +265,95 @@ it('signs exactly the ticket and fee input offline with real signatures and one 
     f.anchor.mockRestore()
   }
 })
-it('blocks source substitution before signature and leaves lost signatures permanently unknown', async () => {
+it('blocks source substitution, and locks a lost signature to the same recipient until a retry completes', async () => {
   const f = await signingFixture()
   try {
     const other = await fixture(),
       bad = await createReceivingRequest(walletFor(3), invitationFor(other.ticket), signal())
     await expect(signHandoff(f.record, bad, f.wallet, snapshot, signal(), f.store)).rejects.toThrow(/request|source/)
+    const sign = f.wallet.createSignature.bind(f.wallet)
     f.wallet.createSignature = async () => {
       throw Error('Wallet response lost')
     }
     const result = await signHandoff(f.record, f.request, f.wallet, snapshot, signal(), f.store)
-    expect(result.signAttempt?.outcome).toBe('unknown')
+    expect(result.signAttempt).toMatchObject({ outcome: 'unknown', walletAsked: true })
     expect(result.transfer).toBeUndefined()
-    await expect(signHandoff(result, f.request, f.wallet, snapshot, signal(), f.store)).rejects.toThrow(/already attempted/)
+    // Once the wallet was asked, the claim can't be released or marked as never asked.
+    expect(() => readSender({ ...result, revision: result.revision + 1, signAttempt: undefined, request: undefined }, result)).toThrow()
+    expect(() =>
+      readSender({ ...result, revision: result.revision + 1, signAttempt: { ...result.signAttempt!, walletAsked: false } }, result),
+    ).toThrow()
+    // A different recipient is refused: a signature to the first may exist.
+    const someoneElse = await createReceivingRequest(walletFor(4), invitationFor(f.ticket), signal())
+    await expect(signHandoff(result, someoneElse, f.wallet, snapshot, signal(), f.store)).rejects.toThrow(/same recipient/)
+    f.wallet.createSignature = sign
+    const retried = await signHandoff(result, f.request, f.wallet, snapshot, signal(), f.store)
+    expect(retried.signAttempt?.outcome).toBe('complete')
+    expect(retried.transfer?.holder).toBe(f.request.recipientIdentity)
+    await expect(signHandoff(retried, f.request, f.wallet, snapshot, signal(), f.store)).rejects.toThrow(/already attempted/)
+  } finally {
+    f.anchor.mockRestore()
+  }
+})
+it('releases the ticket when signing stops before the wallet is asked to build or sign', async () => {
+  const f = await signingFixture()
+  try {
+    const save = f.store.save.bind(f.store),
+      read = f.wallet.getPublicKey.bind(f.wallet)
+    let armed = false,
+      transactionCalls = 0
+    f.store.save = async (next, expected) => {
+      await save(next, expected)
+      if (next.signAttempt?.outcome === 'pending') armed = true
+    }
+    f.wallet.getPublicKey = async args => {
+      if (armed) throw Error('Wallet closed')
+      return read(args)
+    }
+    f.wallet.createAction = async () => {
+      transactionCalls++
+      throw Error('not reached')
+    }
+    const sign = f.wallet.createSignature.bind(f.wallet)
+    f.wallet.createSignature = async args => {
+      transactionCalls++
+      return sign(args)
+    }
+    await expect(signHandoff(f.record, f.request, f.wallet, snapshot, signal(), f.store)).rejects.toThrow('Wallet closed')
+    expect(transactionCalls).toBe(0)
+    const released = (await f.store.load(f.record.id))!
+    expect(released.signAttempt).toBeUndefined()
+    expect(released.request).toBeUndefined()
+    // Nothing was signed, so any recipient may be chosen now.
+    armed = false
+    f.store.save = save
+    f.wallet.getPublicKey = read
+    const someoneElse = await createReceivingRequest(walletFor(4), invitationFor(f.ticket), signal())
+    const result = await signHandoff(released, someoneElse, f.wallet, snapshot, signal(), f.store)
+    expect(result.transfer?.holder).toBe(someoneElse.recipientIdentity)
+  } finally {
+    f.anchor.mockRestore()
+  }
+})
+it('treats an attempt saved before this change as asked, so only the same recipient can be retried', async () => {
+  const f = await signingFixture()
+  try {
+    const now = new Date().toISOString()
+    // Older records went pending, then unknown, with no walletAsked field.
+    const pending = readSender(
+      { ...f.record, revision: f.record.revision + 1, request: f.request, signAttempt: { id: 'old', outcome: 'pending', startedAt: now } },
+      f.record,
+    )
+    await f.store.save(pending, f.record.revision)
+    const legacy = readSender(
+      { ...pending, revision: pending.revision + 1, signAttempt: { id: 'old', outcome: 'unknown', startedAt: now, finishedAt: now } },
+      pending,
+    )
+    await f.store.save(legacy, pending.revision)
+    const someoneElse = await createReceivingRequest(walletFor(4), invitationFor(f.ticket), signal())
+    await expect(signHandoff(legacy, someoneElse, f.wallet, snapshot, signal(), f.store)).rejects.toThrow(/same recipient/)
+    const retried = await signHandoff(legacy, f.request, f.wallet, snapshot, signal(), f.store)
+    expect(retried.transfer?.holder).toBe(f.request.recipientIdentity)
   } finally {
     f.anchor.mockRestore()
   }
@@ -447,4 +525,25 @@ it('finishes cancellation as unknown when the receipt wins the simultaneous revi
   expect(result.funding?.rawReceipt).toEqual(receipt)
   expect((await f.store.load(f.record.id))?.fundAttempt?.outcome).toBe('unknown')
   expect(walletCalls).toBe(1)
+})
+it('treats a crash just after the wallet was asked as asked: same recipient only', async () => {
+  const f = await signingFixture()
+  try {
+    const crashed = readSender(
+      {
+        ...f.record,
+        revision: f.record.revision + 1,
+        request: f.request,
+        signAttempt: { id: 'crashed', outcome: 'pending', startedAt: new Date().toISOString(), walletAsked: true },
+      },
+      f.record,
+    )
+    await f.store.save(crashed, f.record.revision)
+    const someoneElse = await createReceivingRequest(walletFor(4), invitationFor(f.ticket), signal())
+    await expect(signHandoff(crashed, someoneElse, f.wallet, snapshot, signal(), f.store)).rejects.toThrow(/same recipient/)
+    const retried = await signHandoff(crashed, f.request, f.wallet, snapshot, signal(), f.store)
+    expect(retried.transfer?.holder).toBe(f.request.recipientIdentity)
+  } finally {
+    f.anchor.mockRestore()
+  }
 })

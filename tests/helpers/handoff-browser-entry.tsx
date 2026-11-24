@@ -6,3 +6,4 @@ export {senderStore,recipientStore,readSender,readRecipient,sourceKey,recipientK
 export {settlementStore,newSettlement} from '../../src/handoff/settlement.ts'
 export {saveAttendeeTicket} from '../../src/offline/attendee-store.ts'
 export {prepareAttendeeApp} from '../../src/offline/attendee-cache.ts'
+export {senderReleaseStore} from '../../src/handoff/release.ts'

@@ -196,6 +196,20 @@ function guard(sender: SenderRecord, wallet: WalletInterface, signal: AbortSigna
   }
 }
 
+// Read-only: whether the wallet still lists the spent ticket and fee output. Saves nothing.
+export async function checkSpentOutputs(
+  value: SenderRecord,
+  wallet: WalletInterface,
+  signal: AbortSignal,
+): Promise<[ReleaseObservation, ReleaseObservation]> {
+  const sender = readSender(value)
+  if (!sender.funding?.txid || sender.funding.index === undefined) throw Error('This transfer has no saved fee output.')
+  await guard(sender, wallet, signal)()
+  const ticket: OutputRelease = { basket: 'ticketsv-tickets', outpoint: `${sender.ticket.pkg.current.txid}.${sender.ticket.pkg.current.index}`, attempts: [] },
+    fee: OutputRelease = { basket: FUNDING_BASKET, outpoint: `${sender.funding.txid}.${sender.funding.index}`, attempts: [] }
+  return [await observe(wallet, ticket, signal), await observe(wallet, fee, signal)]
+}
+
 export async function releaseSpentOutputs(
   value: SenderRecord,
   settlement: HandoffSettlement,

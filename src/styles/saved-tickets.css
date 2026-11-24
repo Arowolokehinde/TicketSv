@@ -9,8 +9,8 @@
 .saved-library-header .saved-header-dashboard { color: #fff9ef; background: var(--wine); border-color: var(--wine); }
 .saved-library .offline-content { max-width: none; padding: 32px var(--library-gutter) 80px; }
 .saved-library-collection { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 0; }
-.saved-library-collection h1 { display: flex; align-items: center; gap: 10px; margin: 0; font: 600 22px/1.3 Arial, sans-serif; letter-spacing: -.6px; }
-.saved-library-collection h1 > span { display: grid; place-items: center; min-width: 25px; height: 25px; padding-inline: 6px; border: 1px solid #e1e5d3; border-radius: 8px; background: #edf0e3; color: #727c5c; font: 12px monospace; }
+.saved-library-collection h2 { display: flex; align-items: center; gap: 10px; margin: 0; font: 600 22px/1.3 Arial, sans-serif; letter-spacing: -.6px; }
+.saved-library-collection h2 > span { display: grid; place-items: center; min-width: 25px; height: 25px; padding-inline: 6px; border: 1px solid #e1e5d3; border-radius: 8px; background: #edf0e3; color: #727c5c; font: 12px monospace; }
 .saved-library-collection p { margin: 7px 0 0; font: 12px/1.5 Arial, sans-serif; color: #707568; }
 .saved-library-local { display: inline-flex; align-items: center; gap: 6px; color: #707961; font: 11px/1.4 Arial, sans-serif; white-space: nowrap; }
 .saved-library-local .dashboard-icon { width: 14px; height: 14px; }
@@ -69,7 +69,22 @@
 .saved-library-progress a .dashboard-icon { width: 14px; height: 14px; }
 .saved-library-kept { border-color: #e4cfc4; }
 .saved-library-kept li { padding: 6px 0; font: 13px/1.5 Arial, sans-serif; }
-.saved-library-activity { margin-top: 40px; }
+.saved-library-activity { margin-top: 16px; }
+/* Page heading and controls in the same language as Transfer and Receive. */
+.saved-library-heading { margin-bottom: 26px; }
+.saved-library-heading h1 { margin: 15px 0 12px; font: 600 clamp(32px, 3.4vw, 48px)/1.1 Arial, sans-serif; letter-spacing: -1.8px; }
+.saved-library .received-sync { margin: 0 0 26px; }
+.saved-library .received-sync p { margin: 10px 0 0; font: 12px/1.6 Arial, sans-serif; color: #697952; }
+.saved-library :is(.received-sync, .offline-browser-support, .saved-library-activity) .btn { border-radius: 10px; font: 600 12px/1.5 Arial, sans-serif; letter-spacing: 0; text-transform: none; }
+.saved-library .offline-browser-support { margin-top: 40px; }
+.saved-library-step { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.saved-library-tag { padding: 3px 8px; border-radius: 99px; background: #f7ecd8; color: #7a5a1e; font: 600 10px/1.4 Arial, sans-serif; }
+/* What a held ticket can do offline. */
+.saved-card-ready { display: grid; gap: 6px; margin: 16px 0 0; padding: 0; list-style: none; color: #7a5a1e; font: 12px/1.5 Arial, sans-serif; }
+.saved-card-ready li::before { content: '•'; display: inline-block; width: 16px; }
+.saved-card-ready li[data-ready='true'] { color: #55673d; }
+.saved-card-ready li[data-ready='true']::before { content: '✓'; }
+.saved-library .saved-card-ready + .saved-card-open { margin-top: 14px; }
 .saved-library-clear { margin-top: 20px; }
 @media (prefers-reduced-motion: no-preference) {
  .saved-library-card { animation: collection-arrive .55s ease both; }
@@ -85,7 +100,7 @@
  .saved-library-header nav { gap: 9px; }
  .saved-library-header nav a { padding: 11px 12px; min-height: 42px; font-size: 11px; }
  .saved-library-collection { margin-top: 26px; gap: 12px; }
- .saved-library-collection h1 { font-size: 20px; }
+ .saved-library-collection h2 { font-size: 20px; }
  .saved-library-local { display: none; }
  .saved-card-body { padding: 20px; }
  .saved-library .issuance-review { padding: 20px; }

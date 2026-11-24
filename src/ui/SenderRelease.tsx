@@ -5,11 +5,13 @@ import type { SenderRecord } from '../handoff/types.ts'
 import { sourceKey } from '../handoff/store.ts'
 import { loadSnapshot } from '../headers/store.ts'
 import {
+  checkSpentOutputs,
   recheckRelease,
   releaseEligibility,
   releaseSpentOutputs,
   senderForSettlement,
   senderReleaseStore,
+  type ReleaseObservation,
   type SenderRelease as Release,
 } from '../handoff/release.ts'
 
@@ -21,17 +23,19 @@ type Props = {
   wallet: (signal: AbortSignal) => Promise<WalletInterface>
 }
 const short = (outpoint: string) => `${outpoint.slice(0, 6)}…${outpoint.slice(58)}`
-const shown = { listed: 'still listed', absent: 'removed', inconclusive: 'unclear' } as const
+const shown = { listed: 'still listed', absent: 'not listed', inconclusive: 'unclear' } as const
 
-// Shown only on the device that signed this transfer. Release removes the spent
-// ticket and fee outputs from the sender's TicketSV baskets after verified mining.
-// Release needs no network: eligibility uses saved headers and the wallet is local.
+// Shown only on the device that signed this transfer. A read-only check comes first, because a
+// wallet that recorded the transfer itself no longer lists the spent outputs. Release then removes
+// any still listed from the sender's TicketSV baskets after verified mining. No network is needed.
 export function SenderRelease({ settlement, senders, busy, run, wallet }: Props) {
   const sender = senderForSettlement(senders, settlement)
   const [record, setRecord] = useState<Release>(),
     [reason, setReason] = useState(''),
     [eligible, setEligible] = useState(false),
-    [consent, setConsent] = useState(false)
+    [consent, setConsent] = useState(false),
+    [checked, setChecked] = useState<[ReleaseObservation, ReleaseObservation]>()
+  useEffect(() => setChecked(undefined), [settlement.id])
   useEffect(() => {
     if (!sender || busy) return
     let live = true
@@ -60,12 +64,22 @@ export function SenderRelease({ settlement, senders, busy, run, wallet }: Props)
     { basket: 'ticketsv-tickets', outpoint: `${sender.ticket.pkg.current.txid}.${sender.ticket.pkg.current.index}` },
     { basket: 'ticketsv-handoff-fees', outpoint: `${sender.funding.txid}.${sender.funding.index}` },
   ]
+  const seen = (i: number) => record?.outputs[i]?.observation ?? checked?.[i]
   const done = !!record && record.outputs.every(o => o.observation?.state === 'absent')
+  // Only say TicketSV removed them when the wallet confirmed a release.
+  const removed = done && record.outputs.some(o => o.attempts.some(a => a.outcome === 'complete'))
+  const clear = !record && !!checked && checked.every(o => o.state === 'absent')
+  const needsCheck = !record && (!checked || checked.some(o => o.state === 'inconclusive'))
   const unconfirmed = !!record && record.outputs.some(o => o.attempts.length > 0 && o.observation?.state !== 'absent')
   function release() {
     setConsent(false)
     void run(async signal => {
       await releaseSpentOutputs(sender!, settlement, await wallet(signal), await loadSnapshot(), signal)
+    })
+  }
+  function check() {
+    void run(async signal => {
+      setChecked(await checkSpentOutputs(sender!, await wallet(signal), signal))
     })
   }
   function recheck() {
@@ -76,21 +90,28 @@ export function SenderRelease({ settlement, senders, busy, run, wallet }: Props)
   return (
     <div className="handoff-review sender-release">
       <h3>Your wallet (sender)</h3>
-      <p>This device signed the transfer. Your wallet still lists the spent ticket and fee output until you remove them.</p>
+      <p>This device signed the transfer. After mining, your wallet may still list the spent ticket and fee output.</p>
       <ul>
         {rows.map((row, i) => {
-          const o = record?.outputs[i]
+          const o = seen(i)
           return (
             <li key={row.basket}>
               {i === 0 ? 'Ticket' : 'Fee'} <code>{short(row.outpoint)}</code> · Wallet:{' '}
-              <strong>{o?.observation ? shown[o.observation.state] : 'not checked'}</strong>
-              {o?.observation && <> · checked {new Date(o.observation.checkedAt).toLocaleString()}</>}
+              <strong>{o ? shown[o.state] : 'not checked'}</strong>
+              {o && <> · checked {new Date(o.checkedAt).toLocaleString()}</>}
             </li>
           )
         })}
       </ul>
-      {done ? (
+      {removed ? (
         <p className="event-saved">Removed from your wallet's ticket and fee lists. Your wallet history will not show this transfer.</p>
+      ) : done || clear ? (
+        <p className="event-saved">Nothing to remove. Your wallet no longer lists them.</p>
+      ) : needsCheck ? (
+        <>
+          {checked && <p>{checked.find(o => o.state === 'inconclusive')!.reason}</p>}
+          <p>Check your wallet first. This only reads your wallet; nothing is changed.</p>
+        </>
       ) : (
         <>
           {unconfirmed && (
@@ -107,12 +128,17 @@ export function SenderRelease({ settlement, senders, busy, run, wallet }: Props)
         </>
       )}
       <div className="actions">
-        {!done && (
+        {needsCheck && (
+          <button className="btn" disabled={busy} onClick={check}>
+            Check my wallet
+          </button>
+        )}
+        {!done && !clear && !needsCheck && (
           <button className="btn primary" aria-label="Release spent outputs" disabled={busy || !eligible || !consent} onClick={release}>
             Release spent outputs
           </button>
         )}
-        {record && (
+        {record && !done && (
           <button className="btn" disabled={busy} onClick={recheck}>
             Recheck wallet
           </button>

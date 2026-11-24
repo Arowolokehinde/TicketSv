@@ -3,7 +3,7 @@ import type { RelinquishOutputArgs, WalletInterface } from '@bsv/sdk'
 import { handoffFixture } from './helpers/handoff-fixture.ts'
 import { memory, releaseSnapshot, senderReleaseFixture, walletFor } from './helpers/sender-release-fixture.ts'
 import { newSettlement } from '../src/handoff/settlement.ts'
-import { readSenderRelease, recheckRelease, releaseEligibility, releaseSpentOutputs, type SenderRelease } from '../src/handoff/release.ts'
+import { checkSpentOutputs, readSenderRelease, recheckRelease, releaseEligibility, releaseSpentOutputs, type SenderRelease } from '../src/handoff/release.ts'
 
 // Only the synthetic header boundary is replaced; signatures, BEEF and script verification remain real.
 vi.mock('../src/headers/tracker.ts', async original => ({
@@ -202,4 +202,14 @@ it('release record history cannot be rewritten', () => {
       saved,
     ),
   ).toThrow(/attempt/i)
+})
+
+it('checks the wallet read-only: reports listed and absent outputs and removes nothing', async () => {
+  const f = await senderReleaseFixture(),
+    w = releasingWallet(f)
+  expect((await checkSpentOutputs(f.signed, w.wallet, signal())).map(o => o.state)).toEqual(['listed', 'listed'])
+  w.baskets['ticketsv-tickets'].clear()
+  w.baskets['ticketsv-handoff-fees'].clear()
+  expect((await checkSpentOutputs(f.signed, w.wallet, signal())).map(o => o.state)).toEqual(['absent', 'absent'])
+  expect(w.calls).toEqual([])
 })

@@ -27,16 +27,18 @@ test('workspaces have separate navigation and survive direct reloads', async ({ 
     ['/tickets', 'Good times. Great memories.', 'Ticket holder navigation'],
     ['/venue', 'Create event', 'Ticket holder navigation'],
     ['/venue/my-events', 'My events', 'Ticket holder navigation'],
+    // The scanner's two tabs opened the same page, so it has no rail.
     ['/scanner', 'Scan a ticket.', 'Scanner navigation'],
   ]) {
     await page.goto(path!)
     await page.reload()
     await expect(page.getByRole('heading', { name: title!, exact: true })).toBeVisible()
     const rail = page.getByRole('navigation', { name: nav! })
-    await expect(rail).toBeVisible()
     if (path === '/scanner') {
-      await expect(rail.getByRole('link', { name: 'Receive ticket', exact: true })).toHaveCount(0)
+      await expect(rail).toHaveCount(0)
+      continue
     }
+    await expect(rail).toBeVisible()
     await expect(rail.getByRole('link', { name: 'Prepare offline', exact: true })).toHaveCount(0)
   }
 })

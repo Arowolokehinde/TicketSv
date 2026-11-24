@@ -93,7 +93,7 @@ async function mount(page: Page, step?: 'receive' | 'prepare') {
     snapshot,
   )
 }
-async function wallet(context: BrowserContext, w: ProtoWallet) {
+async function wallet(context: BrowserContext, w: ProtoWallet, fail = { signatures: 0 }) {
   const calls: string[] = []
   await context.route('http://localhost:3321/**', async r => {
     const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' }
@@ -107,7 +107,11 @@ async function wallet(context: BrowserContext, w: ProtoWallet) {
     let result: unknown
     if (method === 'getNetwork') result = { network: 'testnet' }
     else if (method === 'getPublicKey') result = await w.getPublicKey(args)
-    else if (method === 'createSignature') result = await w.createSignature(args)
+    else if (method === 'createSignature' && fail.signatures > 0) {
+      fail.signatures--
+      await r.fulfill({ status: 400, headers, json: { status: 'error', code: 'ERR_TEST', description: 'Wallet response lost' } })
+      return
+    } else if (method === 'createSignature') result = await w.createSignature(args)
     // A wallet that cannot build the transfer itself: signing falls back to local PushDrop signatures.
     else if (method === 'createAction') {
       await r.fulfill({
@@ -128,7 +132,8 @@ async function file(page: Page, label: string, value: unknown) {
 }
 test('two distinct wallets exchange and verify a real signed transfer offline, surviving reload', async ({ page, context, browser }) => {
   const f = await handoffFixture(),
-    calls = await wallet(context, f.sender),
+    failures = { signatures: 0 },
+    calls = await wallet(context, f.sender, failures),
     otherContext = await browser.newContext({ baseURL: 'http://127.0.0.1:4175' }),
     other = await otherContext.newPage(),
     recipientCalls = await wallet(otherContext, f.recipient)
@@ -230,8 +235,15 @@ test('two distinct wallets exchange and verify a real signed transfer offline, s
   await page.getByLabel('Choose handoff ticket').selectOption(record.id)
   await file(page, 'Load receiving request file', request)
   await expect(pageNext).toContainText('Done: Receiving request loaded')
+  // The wallet's answer is lost after it was asked: only the same recipient can be retried.
+  failures.signatures = 1
   await page.getByRole('checkbox').check()
   await page.getByRole('button', { name: 'Sign offline transfer', exact: true }).click()
+  await expect(pageNext).toContainText('Retry signing for the same recipient.')
+  await expect(page.getByText('Only the same recipient can be used.', { exact: false })).toBeVisible()
+  await expect(page.getByLabel('Load receiving request file')).toHaveCount(0)
+  await page.getByRole('checkbox').check()
+  await page.getByRole('button', { name: 'Retry signing for the same recipient', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Transfer signed and saved' })).toBeVisible()
   await expect(pageNext).toContainText('Show ticket QR, then Show to scanner.')
   // Back on Prepare, a signed ticket points to Send instead of inviting a recipient again.
@@ -241,6 +253,45 @@ test('two distinct wallets exchange and verify a real signed transfer offline, s
   await expect(page.getByRole('button', { name: 'Send', exact: true })).toContainText('Ready')
   await page.getByRole('button', { name: 'Continue to Send', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Transfer signed and saved' })).toBeVisible()
+  // On the sender's Confirm, only the seller's parts show, and the wallet is checked before any release.
+  await page.getByRole('button', { name: 'Continue to confirmation', exact: true }).click()
+  await expect(page.getByText('You sent this ticket.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Check recipient wallet', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Check my wallet', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Release spent outputs', exact: true })).toHaveCount(0)
+  // A saved release that found both outputs already gone has nothing left to do or recheck.
+  await page.evaluate(async () => {
+    const a = window.HandoffTest,
+      sender = (await a.senderStore.list())[0],
+      checkedAt = new Date().toISOString(),
+      gone = { state: 'absent' as const, checkedAt, reason: 'Not listed.' }
+    await a.senderReleaseStore.save(
+      {
+        kind: 'ticketsv-sender-release',
+        version: 1,
+        id: a.sourceKey(sender.ticket),
+        revision: 0,
+        transferTxid: sender.transfer!.pkg.current.txid,
+        verifiedAt: checkedAt,
+        snapshotId: 'seeded',
+        outputs: [
+          { basket: 'ticketsv-tickets', outpoint: `${sender.ticket.pkg.current.txid}.${sender.ticket.pkg.current.index}`, attempts: [], observation: gone },
+          { basket: 'ticketsv-handoff-fees', outpoint: `${sender.funding!.txid}.${sender.funding!.index}`, attempts: [], observation: gone },
+        ],
+      },
+      undefined,
+    )
+  })
+  await page.getByRole('button', { name: 'Send', exact: true }).click()
+  await page.getByRole('button', { name: 'Confirm', exact: true }).click()
+  await expect(page.getByText('Nothing to remove. Your wallet no longer lists them.', { exact: true })).toBeVisible()
+  await expect(page.getByText('Wallet: not listed', { exact: false })).toHaveCount(2)
+  await expect(page.getByRole('button', { name: 'Recheck wallet', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Check my wallet', exact: true })).toHaveCount(0)
+  await page.evaluate(async () => {
+    const a = window.HandoffTest
+    await a.senderReleaseStore.remove(a.sourceKey((await a.senderStore.list())[0].ticket), 0)
+  })
   const transfer = await page.evaluate(async () => (await window.HandoffTest.senderStore.list())[0].transfer!)
   expect(Transaction.fromAtomicBEEF(Utils.toArray(transfer.pkg.atomicBeefBase64, 'base64')).inputs).toHaveLength(2)
   // The phone can't see the sender scan the request, so the receiver moves on.
@@ -260,8 +311,9 @@ test('two distinct wallets exchange and verify a real signed transfer offline, s
   await expect(
     other.getByText('No device can rule out that the seller also signed it to someone else offline', { exact: false }),
   ).toBeVisible()
-  expect(calls.filter(c => c === 'createSignature')).toHaveLength(2)
-  expect(calls.filter(c => c === 'createAction')).toHaveLength(1)
+  // One lost signature, then the retry's two.
+  expect(calls.filter(c => c === 'createSignature')).toHaveLength(3)
+  expect(calls.filter(c => c === 'createAction')).toHaveLength(2)
   expect(recipientCalls.filter(c => c === 'createSignature')).toHaveLength(2)
   expect(blocked).toEqual([])
   const count = recipientCalls.length
@@ -289,7 +341,7 @@ test('two distinct wallets exchange and verify a real signed transfer offline, s
 })
 test('publication and recipient import have separate approvals', async ({ page }) => {
   const f = await handoffFixture(true)
-  await mount(page)
+  await mount(page, 'receive')
   await page.evaluate(async ticket => {
     const a = window.HandoffTest,
       r = a.newSettlement(ticket)
@@ -302,6 +354,7 @@ test('publication and recipient import have separate approvals', async ({ page }
   }, f.ticket)
   await page.getByRole('button', { name: 'Confirm', exact: true }).click()
   await page.getByLabel('Saved transfer', { exact: true }).selectOption({ index: 1 })
+  await expect(page.getByText('You received this ticket.', { exact: true })).toBeVisible()
   const publish = page.getByRole('checkbox', { name: /publishing/ }),
     add = page.getByRole('checkbox', { name: /adding this exact/ })
   await publish.check()
@@ -412,7 +465,7 @@ test('explicit publication, mined verification and recipient import remain separ
     } else throw Error('Unexpected wallet mutation ' + method)
     await r.fulfill({ headers, json: result })
   })
-  await mount(page)
+  await mount(page, 'receive')
   await page.evaluate(async ticket => {
     const a = window.HandoffTest
     await a.settlementStore.save(a.newSettlement(ticket), undefined)
@@ -446,11 +499,16 @@ test('explicit publication, mined verification and recipient import remain separ
   await expect(page.getByText(/Wallet record: present/)).toBeVisible()
   expect(calls.filter(c => c === 'internalizeAction')).toHaveLength(1)
   const count = calls.length
-  await mount(page)
+  await mount(page, 'receive')
   await page.evaluate(() => window.HandoffTest.render())
   await page.getByRole('button', { name: 'Confirm', exact: true }).click()
   await page.getByLabel('Saved transfer', { exact: true }).selectOption({ index: 1 })
   await expect(page.getByText('Import response: accepted.', { exact: true })).toBeVisible()
   expect(calls).toHaveLength(count)
   expect(publications).toHaveLength(1)
+  // The Transfer page's Confirm lists only transfers this device sent.
+  await mount(page, 'prepare')
+  await page.evaluate(() => window.HandoffTest.render())
+  await page.getByRole('button', { name: 'Confirm', exact: true }).click()
+  await expect(page.getByText('No sent transfers on this device yet.', { exact: true })).toBeVisible()
 })

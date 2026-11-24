@@ -17,13 +17,13 @@ it('invites the recipient only while the ticket can still be signed', () => {
 it('points a signed ticket to Send instead of inviting again', () => {
   expect(sendNext({ signAttempt: attempt('complete'), transfer: {} as never }, true)).toEqual({ kind: 'signed' })
 })
-it('blocks a ticket whose signing ended without a saved transfer, with its reason', () => {
+it('offers a same-recipient retry when signing ended without a saved transfer, with its reason', () => {
   expect(sendNext({ signAttempt: attempt('unknown', 'Wallet response lost') }, true)).toEqual({
-    kind: 'blocked',
+    kind: 'retry',
     outcome: 'unknown',
     reason: 'Wallet response lost',
   })
-  expect(sendNext({ signAttempt: attempt('pending') }, true)).toEqual({ kind: 'blocked', outcome: 'pending' })
+  expect(sendNext({ signAttempt: attempt('pending') }, true)).toEqual({ kind: 'retry', outcome: 'pending' })
 })
 
 const complete = attempt('complete')
@@ -55,9 +55,13 @@ it('guides Send from loading the request to showing the ticket', () => {
     next: "Show it to the recipient: Show ticket QR, then Show to scanner. Once you're both back online, continue to confirmation.",
   })
 })
-it('says nothing next when an outcome needs review or the ticket is blocked', () => {
+it('points an unfinished signing to a same-recipient retry, and says nothing while the fee needs review', () => {
   expect(transferNext('prepare', { fundAttempt: attempt('unknown') }, false, false)).toBeUndefined()
-  expect(transferNext('prepare', { fundAttempt: complete, signAttempt: attempt('unknown') }, true, false)).toBeUndefined()
-  expect(transferNext('send', { fundAttempt: complete, signAttempt: attempt('unknown') }, true, true)).toBeUndefined()
+  expect(transferNext('prepare', { fundAttempt: complete, signAttempt: attempt('unknown') }, true, false)).toEqual({
+    next: "Signing didn't finish. Continue to Send to retry for the same recipient.",
+  })
+  expect(transferNext('send', { fundAttempt: complete, signAttempt: attempt('unknown') }, true, false)).toEqual({
+    next: "Retry signing for the same recipient. A different recipient can't be used for this ticket.",
+  })
   expect(transferNext('send', undefined, false, false)).toBeUndefined()
 })

@@ -132,6 +132,36 @@ it('shows each ticket with its status, handoffs in progress with their next step
   }
 }, 15000)
 
+const offline = (page: Page) =>
+  page.evaluate(() => Object.defineProperty(navigator, 'onLine', { get: () => false, configurable: true }))
+
+it('says what each held ticket can do offline, under a heading like the other pages', async () => {
+  const { recipient, settlement, funded } = await records(),
+    context = await browser.newContext(),
+    page = await context.newPage(),
+    network = await setup(context)
+  try {
+    await open(page, '/offline/tickets')
+    await seed(page, recipient, settlement, funded)
+    await offline(page)
+    await page.evaluate(() => window.DashboardHandoffTest.mount())
+    await page.getByRole('heading', { level: 1, name: 'Offline tickets.' }).waitFor({ timeout: 1500 })
+    const ticket = page.locator('article').filter({ hasText: recipient.ticket!.event.name })
+    // No headers are saved here; the ready states are covered in tests/offline-home.test.ts.
+    await ticket.getByText("Block headers for this ticket aren't saved. Needs internet.", { exact: true }).waitFor({ timeout: 1500 })
+    // The fee is mined but the device wasn't prepared, exactly as the Transfer page would say.
+    await ticket.getByText('Transfer needs internet first: select Check mining and prepare device.', { exact: true }).waitFor()
+    expect(await ticket.getByRole('link', { name: 'Transfer offline' }).count()).toBe(0)
+    // Signing works offline, so its row isn't tagged.
+    const row = page.getByRole('region', { name: 'Handoffs in progress' }).locator('li', { hasText: 'Sign offline transfer' })
+    await row.waitFor()
+    expect(await row.getByText('Needs internet', { exact: true }).count()).toBe(0)
+    expect(network.requests()).toBe(0)
+  } finally {
+    await context.close()
+  }
+}, 15000)
+
 it('remove all keeps a handoff whose wallet outcome is unknown and says why', async () => {
   const { recipient, settlement, unknown } = await records(),
     context = await browser.newContext(),
@@ -152,11 +182,11 @@ it('remove all keeps a handoff whose wallet outcome is unknown and says why', as
     })
     expect(left).toEqual([0, 0, 1])
     await open(page, '/offline/tickets')
+    await offline(page)
     await page.evaluate(() => window.DashboardHandoffTest.mount())
-    await page
-      .getByRole('region', { name: 'Handoffs in progress' })
-      .getByRole('link', { name: 'Fee preparation needs review' })
-      .waitFor({ timeout: 1500 })
+    const row = page.getByRole('region', { name: 'Handoffs in progress' }).locator('li', { hasText: 'Fee preparation needs review' })
+    await row.getByRole('link', { name: 'Fee preparation needs review' }).waitFor({ timeout: 1500 })
+    await row.getByText('Needs internet', { exact: true }).waitFor()
     expect(network.requests()).toBe(0)
   } finally {
     await context.close()

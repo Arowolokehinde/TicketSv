@@ -143,3 +143,28 @@ test('an expired event request invalidates an older pending session response', a
   release(); await completed
   await expect(page.getByRole('button', { name: 'Create event', exact: true })).toHaveCount(0)
 })
+
+test('an unreachable server keeps the signed-in account instead of signing out', async ({ page, context }) => {
+  await accountApi(context)
+  await page.goto('/venue/my-events')
+  await expect(page.getByRole('heading', { name: 'My events', exact: true })).toBeVisible()
+  await page.route('**/api/auth/session', route => route.abort())
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await page.waitForTimeout(300)
+  await expect(page.getByRole('heading', { name: 'My events', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Connect your wallet to continue.' })).toHaveCount(0)
+})
+
+test('signing in offline says it needs internet and makes no wallet calls', async ({ page }) => {
+  const calls = await wallet(page)
+  await page.goto('/offline/tickets')
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'onLine', { get: () => false, configurable: true })
+    dispatchEvent(new Event('offline'))
+  })
+  await page.route('**/api/auth/session', route => route.abort())
+  await page.getByRole('button', { name: 'Account', exact: true }).click()
+  await page.getByRole('button', { name: 'Connect and sign in', exact: true }).click()
+  await expect(page.getByRole('dialog').getByRole('alert')).toHaveText('Signing in needs internet or use the application offline.')
+  expect(calls).toEqual([])
+})

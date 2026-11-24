@@ -18,6 +18,8 @@ export function authenticationWallet(wallet: WalletInterface, signal: AbortSigna
   } })
 }
 export async function signIn(transport: WalletTransport, signal: AbortSignal): Promise<AuthSession> {
+  // The server checks the signed challenge, so don't ask the wallet to sign while offline.
+  if (!navigator.onLine) throw new Error('Signing in needs internet or use the application offline.')
   let cancellationToken: string | undefined
   try {
   const wallet = await openWalletClient(transport, signal)

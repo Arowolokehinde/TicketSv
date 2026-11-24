@@ -37,10 +37,12 @@ export function AuthProvider({
   const generation = useRef(0)
   const channel = useRef<BroadcastChannel | null>(null)
   const identity = useRef<string | null>(null)
+  const kept = useRef<AuthSession | null>(null)
   const applySession = useCallback((next: AuthSession | null) => {
     if (identity.current !== (next?.identityKey ?? null)) advanceAuthEpoch(next?.identityKey ?? null)
     if (identity.current && next && identity.current !== next.identityKey) revokeScannerPermit()
     identity.current = next?.identityKey ?? null
+    kept.current = next
     setSession(next)
   }, [])
   const refresh = useCallback(async () => {
@@ -61,6 +63,8 @@ export function AuthProvider({
           return local
         }
       }
+      // An unreachable server says nothing about the session. Keep it and check again once reconnected.
+      if (failure instanceof ApiFailure && failure.status === 0 && kept.current) return kept.current
       if (current === generation.current && failure instanceof ApiFailure && failure.status === 401) revokeScannerPermit()
       if (current === generation.current) {
         applySession(null)
@@ -87,8 +91,8 @@ export function AuthProvider({
       if (document.visibilityState === 'visible') check()
     }
     window.addEventListener('focus', check)
+    window.addEventListener('online', check)
     if (offlineSession) {
-      window.addEventListener('online', check)
       window.addEventListener('offline', check)
       window.addEventListener('storage', check)
     }

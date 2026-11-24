@@ -1,7 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
 import { fundedForSigning } from './helpers/sender-release-fixture.ts'
 import { handoffFixture } from './helpers/handoff-fixture.ts'
-import { groupByAccount, handoffNextStep, removalPlan, statusLabel, storageState, ticketStatus } from '../src/offline/home.ts'
+import {
+  groupByAccount,
+  handoffNextStep,
+  needsInternet,
+  offlineReadiness,
+  readinessText,
+  removalPlan,
+  statusLabel,
+  storageState,
+  ticketStatus,
+} from '../src/offline/home.ts'
 import { newSettlement, readSettlement, type HandoffSettlement } from '../src/handoff/settlement.ts'
 import type { Attempt, RecipientRecord, SenderRecord } from '../src/handoff/types.ts'
 
@@ -79,9 +89,57 @@ describe('offline home', () => {
       'Verify mining',
     )
     expect(handoffNextStep({ sender: signed, settlement: { ...newSettlement(mined.ticket), submit: attempt('complete') } })).toBeNull()
+    // Mined is final, whoever published it.
+    expect(handoffNextStep({ sender: signed, settlement: newSettlement(mined.ticket) })).toBeNull()
+    expect(handoffNextStep({ sender: { ...f.ready, signAttempt: attempt('unknown') } })).toBe('Retry signing for the same recipient')
+    expect(handoffNextStep({ sender: { ...f.ready, signAttempt: attempt('pending') } })).toBe('Retry signing for the same recipient')
     expect(handoffNextStep({ recipient: { ...recipient, ticket: undefined } })).toBe('Waiting for the ticket')
     expect(handoffNextStep({ recipient })).toBe('Verify mining')
     expect(handoffNextStep({ recipient: { ...recipient, ticket: mined.ticket } })).toBe('Add to wallet')
+  })
+  it('says which next steps need internet', () => {
+    for (const step of [
+      'Prepare transfer fee',
+      'Fee preparation needs review',
+      'Waiting for fee mining',
+      'Publish transfer',
+      'Publication needs review',
+      'Verify mining',
+      'Wallet import needs review',
+      'Add to wallet',
+    ])
+      expect(needsInternet(step)).toBe(true)
+    for (const step of ['Sign offline transfer', 'Retry signing for the same recipient', 'Waiting for the ticket'])
+      expect(needsInternet(step)).toBe(false)
+  })
+  it('works out what a held ticket can do offline from saved records and headers', async () => {
+    const { mined, unmined, f } = await records()
+    // The fixtures are first in block 1762324, so their headers are needed through 1762424 (maturity).
+    expect(offlineReadiness(mined.ticket.pkg, undefined, 1762424).door).toBe('ready')
+    expect(offlineReadiness(mined.ticket.pkg, undefined, 1762423).door).toBe('headers')
+    expect(offlineReadiness(mined.ticket.pkg, undefined, undefined).door).toBe('headers')
+    expect(offlineReadiness(unmined.ticket.pkg, undefined, 2000000).door).toBe('unmined')
+    expect(offlineReadiness(f.ticket.pkg, undefined, 2000000).transfer).toBe('fee')
+    expect(offlineReadiness(f.ticket.pkg, f.funded, 2000000).transfer).toBe('fee-mining')
+    // Mined but not yet checked with Check mining and prepare device.
+    expect(offlineReadiness(f.ticket.pkg, { ...f.ready, funding: { ...f.ready.funding!, observation: undefined } }, 2000000).transfer).toBe(
+      'headers',
+    )
+    expect(offlineReadiness(f.ticket.pkg, f.ready, 1762423).transfer).toBe('headers')
+    expect(offlineReadiness(f.ticket.pkg, f.ready, 2000000).transfer).toBe('ready')
+    expect(offlineReadiness(f.ticket.pkg, { ...f.ready, signAttempt: attempt('unknown') }, 2000000).transfer).toBe('busy')
+    expect(offlineReadiness(f.ticket.pkg, { ...f.ready, fundAttempt: attempt('unknown') }, 2000000).transfer).toBe('busy')
+    expect(readinessText.door).toEqual({
+      ready: 'Ready for the door',
+      unmined: 'Not mined yet. The door admits only mined tickets.',
+      headers: "Block headers for this ticket aren't saved. Needs internet.",
+    })
+    expect(readinessText.transfer).toEqual({
+      ready: 'Ready to transfer offline',
+      fee: 'Transfer needs internet first: prepare the transfer fee.',
+      'fee-mining': 'Transfer needs internet first: wait for the fee to be mined.',
+      headers: 'Transfer needs internet first: select Check mining and prepare device.',
+    })
   })
   it('removes everything except unfinished or unknown steps', async () => {
     const { unmined, f, recipient } = await records()

@@ -4,6 +4,7 @@ import { settlementKey, type HandoffSettlement } from '../handoff/settlement.ts'
 import type { Attempt, RecipientRecord, SenderRecord } from '../handoff/types.ts'
 import type { SenderRelease } from '../handoff/release.ts'
 import type { TicketPackage } from '../tickets/types.ts'
+import { requiredHeaderHeight } from '../handoff/headers.ts'
 
 // The offline home's view of this device's saved records. Every status and
 // next step is worked out from saved evidence only, so it works offline, and
@@ -55,10 +56,12 @@ export function handoffNextStep(record: {
     if (unfinished(sender.fundAttempt)) return 'Fee preparation needs review'
     if (!minedEnvelope(sender.funding?.txid, sender.funding?.beef)) return 'Waiting for fee mining'
     if (!sender.signAttempt) return 'Sign offline transfer'
-    if (unfinished(sender.signAttempt) || !sender.transfer) return 'Signing needs review'
+    if (unfinished(sender.signAttempt) || !sender.transfer) return 'Retry signing for the same recipient'
+    // Mined is final, whoever published it.
+    if (settlement && isMined(settlement.ticket.pkg)) return null
     if (!settlement?.submit) return 'Publish transfer'
     if (unfinished(settlement.submit)) return 'Publication needs review'
-    return isMined(settlement.ticket.pkg) ? null : 'Verify mining'
+    return 'Verify mining'
   }
   if (recipient) {
     if (!recipient.ticket) return 'Waiting for the ticket'
@@ -67,6 +70,67 @@ export function handoffNextStep(record: {
     return settlement?.wallet?.state === 'present' ? null : 'Add to wallet'
   }
   return null
+}
+
+const online = new Set([
+  'Prepare transfer fee',
+  'Fee preparation needs review',
+  'Waiting for fee mining',
+  'Publish transfer',
+  'Publication needs review',
+  'Verify mining',
+  'Wallet import needs review',
+  'Add to wallet',
+])
+export const needsInternet = (step: string): boolean => online.has(step)
+
+// What a ticket this device holds can do offline, from saved records and the saved header tip.
+// Transfer readiness matches the Transfer page's "Ready for offline transfer".
+export type DoorReadiness = 'ready' | 'unmined' | 'headers'
+export type TransferReadiness = 'ready' | 'fee' | 'fee-mining' | 'headers' | 'busy'
+export const readinessText = {
+  door: {
+    ready: 'Ready for the door',
+    unmined: 'Not mined yet. The door admits only mined tickets.',
+    headers: "Block headers for this ticket aren't saved. Needs internet.",
+  },
+  transfer: {
+    ready: 'Ready to transfer offline',
+    fee: 'Transfer needs internet first: prepare the transfer fee.',
+    'fee-mining': 'Transfer needs internet first: wait for the fee to be mined.',
+    headers: 'Transfer needs internet first: select Check mining and prepare device.',
+  },
+} as const
+function height(txid: string, beef: string): number | undefined {
+  try {
+    return requiredHeaderHeight(txid, beef)
+  } catch {
+    return undefined
+  }
+}
+export function offlineReadiness(
+  pkg: TicketPackage,
+  sender: SenderRecord | undefined,
+  tip: number | undefined,
+): { door: DoorReadiness; transfer: TransferReadiness } {
+  const covered = (h: number | undefined) => h !== undefined && tip !== undefined && tip >= h
+  const ticketHeight = isMined(pkg) ? height(pkg.current.txid, pkg.atomicBeefBase64) : undefined
+  const door: DoorReadiness = !isMined(pkg) ? 'unmined' : covered(ticketHeight) ? 'ready' : 'headers'
+  const funding = sender?.funding
+  const feeHeight = funding?.txid && funding.beef && minedEnvelope(funding.txid, funding.beef) ? height(funding.txid, funding.beef) : undefined
+  const transfer: TransferReadiness =
+    sender?.signAttempt || sender?.transfer
+      ? 'busy'
+      : !sender?.fundAttempt
+        ? 'fee'
+        : unfinished(sender.fundAttempt)
+          ? 'busy'
+          : feeHeight === undefined
+            ? 'fee-mining'
+            : funding?.observation && ticketHeight !== undefined && covered(Math.max(ticketHeight, feeHeight))
+              ? 'ready'
+              : 'headers'
+  return { door, transfer }
 }
 
 type Records = {

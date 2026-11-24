@@ -48,8 +48,19 @@ it('restores evidence but recomputes verdicts, and fits narrow screens',async()=
 })
 it('requires event setup and reports camera denial without requesting a wallet',async()=>{
  let context=await browser.newContext();let state=await pageFor(context,false)
- expect(await state.page.getByRole('button',{name:'Scan ticket QR',exact:true}).isDisabled()).toBe(true)
+ // Before preparation only step 1 has controls: no disabled scanning, no tabs that change nothing.
+ await state.page.getByRole('heading',{level:1,name:'Scan a ticket.',exact:true}).waitFor()
+ await state.page.getByText('STEP 1 · WHILE ONLINE',{exact:true}).waitFor()
+ await state.page.getByText('Check tickets here once this scanner is prepared.',{exact:true}).waitFor()
+ expect(await state.page.getByRole('button',{name:'Scan ticket QR',exact:true}).count()).toBe(0)
+ expect(await state.page.getByLabel('Load ticket file',{exact:true}).count()).toBe(0)
+ expect(await state.page.getByRole('navigation',{name:'Scanner navigation'}).count()).toBe(0)
  await context.close();context=await browser.newContext();state=await pageFor(context)
+ // Once prepared, checking comes first and scanning is the main action.
+ const order=await state.page.evaluate(()=>{const check=document.querySelector('.scanner-check')!,setup=document.querySelector('.scanner-setup')!;return !!(check.compareDocumentPosition(setup)&Node.DOCUMENT_POSITION_FOLLOWING)})
+ expect(order).toBe(true)
+ await state.page.getByText('STEP 2 · AT THE DOOR',{exact:true}).waitFor()
+ await state.page.getByText('Load a ticket file instead',{exact:true}).waitFor()
  await state.page.evaluate(()=>Object.defineProperty(navigator,'mediaDevices',{value:{getUserMedia:async()=>{throw new Error('Camera permission denied')}}}))
  await state.page.getByRole('button',{name:'Scan ticket QR',exact:true}).click()
  await state.page.getByRole('alert').filter({hasText:'Camera permission denied'}).waitFor()
@@ -93,6 +104,8 @@ it('admits only a mined, unspent copy, refuses an unmined or second copy, and re
   await seen(page.getByRole('heading',{name:'Passes POC door policy',exact:true}))
   await seen(page.getByText(/^Ticket evidence: \d+\.\d KB · 1 transaction · 1 mining proof$/))
   await seen(page.getByText(/^Spend check: saved list from \d\d:\d\d$/))
+  // The decision is read first, above the result details.
+  expect(await page.evaluate(()=>!!(document.querySelector('.scanner-door')!.compareDocumentPosition(document.querySelector('.scanner-result')!)&Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true)
   await page.getByRole('button',{name:'Admit',exact:true}).click()
   await seen(page.locator('.scanner-door').getByText('Admitted',{exact:true}))
   await check(d.b)

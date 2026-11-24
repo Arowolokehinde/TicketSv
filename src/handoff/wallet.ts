@@ -497,8 +497,14 @@ export async function signHandoff(
 ): Promise<SenderRecord> {
   record = readSender(record)
   await freshRecord(record, store)
-  if (record.signAttempt || record.transfer) throw Error('Signing was already attempted; signed bytes cannot be revoked or retried.')
+  if (record.transfer || record.signAttempt?.outcome === 'complete')
+    throw Error('Signing was already attempted; signed bytes cannot be revoked or retried.')
   const request = readHandoffRequest(value)
+  if (record.signAttempt?.walletAsked === false) record = await write(store, record, { signAttempt: undefined, request: undefined })
+  else if (record.signAttempt && !same(record.request, request))
+    throw Error(
+      `This ticket can only be signed again for the same recipient (request ${record.request!.request.requestId.slice(0, 8)}). A signature for them may already exist.`,
+    )
   if (!same(request.invitation, invitationFor(record.ticket, request.invitation.requiredHeight)))
     throw Error('Receiving request does not match this source, event or trusted venue.')
   if (request.request.recipient.publicKey === record.ticket.pkg.request.recipient.publicKey)
@@ -526,11 +532,15 @@ export async function signHandoff(
     0,
   )
   // Reserve before either signature. The claim belongs to the source, not this request.
-  const attempt = { id: crypto.randomUUID(), outcome: 'pending' as const, startedAt: new Date().toISOString() }
+  const attempt = { id: crypto.randomUUID(), outcome: 'pending' as const, startedAt: new Date().toISOString(), walletAsked: false }
   signal.throwIfAborted()
-  await write(store, record, { request, signAttempt: attempt })
+  let claimed = await write(store, record, { request, signAttempt: attempt }),
+    asked = false
   try {
     await prepareSigning(record, wallet, snapshot, signal)
+    // Saved before any wallet call that builds or signs, so a lost answer is never mistaken for none.
+    claimed = await write(store, claimed, { signAttempt: { ...attempt, walletAsked: true } })
+    asked = true
     const managed = await walletManagedTransfer(record, request, wallet, ticketInput, feeInput, signal)
     if (managed === 'fallback') {
       const keys = [pkg.request.recipient, funding.key]
@@ -581,6 +591,11 @@ export async function signHandoff(
     if (done.signAttempt?.outcome === 'complete') report?.(recorded)
     return done
   } catch (error) {
-    return finish(store, record.id, attempt.id, 'signAttempt', 'unknown', {}, failureReason(error))
+    if (asked) return finish(store, record.id, attempt.id, 'signAttempt', 'unknown', {}, failureReason(error))
+    // Nothing was signed, so release the ticket. If this save fails, the next attempt releases it.
+    const current = await store.load(record.id).catch(() => undefined)
+    if (current?.signAttempt?.id === attempt.id)
+      await write(store, current, { signAttempt: undefined, request: undefined }).catch(() => undefined)
+    throw error
   }
 }
