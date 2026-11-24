@@ -117,7 +117,8 @@ export function offlineReadiness(
   const ticketHeight = isMined(pkg) ? height(pkg.current.txid, pkg.atomicBeefBase64) : undefined
   const door: DoorReadiness = !isMined(pkg) ? 'unmined' : covered(ticketHeight) ? 'ready' : 'headers'
   const funding = sender?.funding
-  const feeHeight = funding?.txid && funding.beef && minedEnvelope(funding.txid, funding.beef) ? height(funding.txid, funding.beef) : undefined
+  const feeHeight =
+    funding?.txid && funding.beef && minedEnvelope(funding.txid, funding.beef) ? height(funding.txid, funding.beef) : undefined
   const transfer: TransferReadiness =
     sender?.signAttempt || sender?.transfer
       ? 'busy'

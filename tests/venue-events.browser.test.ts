@@ -1,7 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
 import { accountApi } from './helpers/account-api.ts'
 let api: Awaited<ReturnType<typeof accountApi>>
-test.beforeEach(async ({ context }) => { api = await accountApi(context) })
+test.beforeEach(async ({ context }) => {
+  api = await accountApi(context)
+})
 
 async function fillEvent(page: Page, name = 'Harbour Nights') {
   await page.getByLabel('Event name', { exact: true }).fill(name)
@@ -83,20 +85,30 @@ test('invalid fields stay editable; cancelling preserves the saved event', async
 test('cover is saved with the event and unsafe image types are rejected', async ({ page }) => {
   await page.goto('/venue')
   await fillEvent(page)
-  await page.getByLabel('Event image (optional)').setInputFiles({ name: 'bad.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg/>') })
+  await page
+    .getByLabel('Event image (optional)')
+    .setInputFiles({ name: 'bad.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg/>') })
   await expect(page.getByRole('alert')).toContainText('PNG, JPEG or WebP')
-  await page.getByLabel('Event image (optional)').setInputFiles({ name: 'broken.png', mimeType: 'image/png', buffer: Buffer.from('not an image') })
+  await page
+    .getByLabel('Event image (optional)')
+    .setInputFiles({ name: 'broken.png', mimeType: 'image/png', buffer: Buffer.from('not an image') })
   await expect(page.getByRole('alert')).toContainText('could not be opened')
-  await page.getByLabel('Event image (optional)').setInputFiles({ name: 'large.png', mimeType: 'image/png', buffer: Buffer.alloc(2_000_001) })
+  await page
+    .getByLabel('Event image (optional)')
+    .setInputFiles({ name: 'large.png', mimeType: 'image/png', buffer: Buffer.alloc(2_000_001) })
   await expect(page.getByRole('alert')).toContainText('up to 2 MB')
   const png = await page.evaluate(() => {
     const canvas = document.createElement('canvas')
-    canvas.width = 100; canvas.height = 60
+    canvas.width = 100
+    canvas.height = 60
     const context = canvas.getContext('2d')!
-    context.fillStyle = '#722f2e'; context.fillRect(0, 0, 100, 60)
+    context.fillStyle = '#722f2e'
+    context.fillRect(0, 0, 100, 60)
     return canvas.toDataURL('image/png').split(',')[1]!
   })
-  await page.getByLabel('Event image (optional)').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') })
+  await page
+    .getByLabel('Event image (optional)')
+    .setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') })
   await expect(page.getByRole('region', { name: 'Event preview' }).getByRole('img')).toBeVisible()
   await page.getByRole('button', { name: 'Save draft', exact: true }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Draft saved' })).toBeVisible()
@@ -141,20 +153,41 @@ test('a stale editor cannot overwrite another tab’s saved changes', async ({ p
 
 test('a late edit response cannot replace the newer selected event', async ({ page, context }) => {
   const fixture = await accountApi(context)
-  const common = { description: '', date: '2027-01-01', time: '18:00', timezone: 'UTC', venue: 'Hall', address: 'Street', image: null, status: 'draft', revision: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  const common = {
+    description: '',
+    date: '2027-01-01',
+    time: '18:00',
+    timezone: 'UTC',
+    venue: 'Hall',
+    address: 'Street',
+    image: null,
+    status: 'draft',
+    revision: 1,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
   fixture.records.set('a', { ...common, id: 'a', name: 'Event A' })
   fixture.records.set('b', { ...common, id: 'b', name: 'Event B' })
   let release!: () => void, started!: () => void
-  const held = new Promise<void>(resolve => { release = resolve })
-  const pending = new Promise<void>(resolve => { started = resolve })
-  await page.route('**/api/events/a', async route => { started(); await held; await route.fulfill({ json: fixture.records.get('a') }) })
+  const held = new Promise<void>(resolve => {
+    release = resolve
+  })
+  const pending = new Promise<void>(resolve => {
+    started = resolve
+  })
+  await page.route('**/api/events/a', async route => {
+    started()
+    await held
+    await route.fulfill({ json: fixture.records.get('a') })
+  })
   await page.goto('/venue/my-events')
   await page.getByRole('button', { name: 'Edit Event A', exact: true }).click()
   await pending
   await page.getByRole('button', { name: 'Edit Event B', exact: true }).click()
   await expect(page.getByLabel('Event name', { exact: true })).toHaveValue('Event B')
   const completed = page.waitForResponse(response => response.url().endsWith('/api/events/a'))
-  release(); await completed
+  release()
+  await completed
   await page.getByLabel('Event name', { exact: true }).fill('Updated B')
   await page.getByRole('button', { name: 'Save draft', exact: true }).click()
   await expect(page.locator('.event-card')).toHaveCount(2)

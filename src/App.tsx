@@ -42,6 +42,14 @@ const devScreens =
       }
     : undefined
 
+// Titles for pages that have no workspace route.
+const otherTitles: Record<string, string> = {
+  '/offline/handoff': 'Ticket handoff',
+  '/offline/tickets': 'Offline tickets',
+  '/dev/feasibility': 'Development harness',
+  '/dev/reopening': 'Offline reopening experiment',
+}
+
 // Ordinary links support direct URLs, refresh and browser back.
 // Static hosting must serve index.html for product paths (Vite does this).
 export default function App(): React.JSX.Element {
@@ -65,7 +73,11 @@ export default function App(): React.JSX.Element {
     moved = movedRoute(path)
   const DevScreen = devScreens?.[path as keyof typeof devScreens]
   useEffect(() => {
-    document.title = `${path === '/' ? 'Your ticket. Ready to change hands.' : (route?.title ?? (path === '/offline/handoff' ? 'Ticket handoff' : path === '/offline/tickets' ? 'Offline tickets' : path.startsWith('/events') ? 'Events' : path === '/dev/feasibility' ? 'Development harness' : path === '/dev/reopening' ? 'Offline reopening experiment' : 'Page not found'))} — TicketSV`
+    const title =
+      path === '/'
+        ? 'Your ticket. Ready to change hands.'
+        : (route?.title ?? otherTitles[path] ?? (path.startsWith('/events') ? 'Events' : 'Page not found'))
+    document.title = `${title} — TicketSV`
   }, [path, route?.title])
   useEffect(() => {
     if (moved) location.replace(moved)

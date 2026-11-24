@@ -132,8 +132,7 @@ it('shows each ticket with its status, handoffs in progress with their next step
   }
 }, 15000)
 
-const offline = (page: Page) =>
-  page.evaluate(() => Object.defineProperty(navigator, 'onLine', { get: () => false, configurable: true }))
+const offline = (page: Page) => page.evaluate(() => Object.defineProperty(navigator, 'onLine', { get: () => false, configurable: true }))
 
 it('says what each held ticket can do offline, under a heading like the other pages', async () => {
   const { recipient, settlement, funded } = await records(),

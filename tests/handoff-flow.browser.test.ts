@@ -275,8 +275,18 @@ test('two distinct wallets exchange and verify a real signed transfer offline, s
         verifiedAt: checkedAt,
         snapshotId: 'seeded',
         outputs: [
-          { basket: 'ticketsv-tickets', outpoint: `${sender.ticket.pkg.current.txid}.${sender.ticket.pkg.current.index}`, attempts: [], observation: gone },
-          { basket: 'ticketsv-handoff-fees', outpoint: `${sender.funding!.txid}.${sender.funding!.index}`, attempts: [], observation: gone },
+          {
+            basket: 'ticketsv-tickets',
+            outpoint: `${sender.ticket.pkg.current.txid}.${sender.ticket.pkg.current.index}`,
+            attempts: [],
+            observation: gone,
+          },
+          {
+            basket: 'ticketsv-handoff-fees',
+            outpoint: `${sender.funding!.txid}.${sender.funding!.index}`,
+            attempts: [],
+            observation: gone,
+          },
         ],
       },
       undefined,
@@ -335,7 +345,9 @@ test('two distinct wallets exchange and verify a real signed transfer offline, s
   await other.goto('/offline/tickets')
   await expect(other.getByRole('link', { name: 'Open received ticket' })).toBeVisible()
   await other.getByRole('link', { name: 'Open received ticket' }).click()
-  await expect(other.getByRole('region', { name: 'Receive steps' }).locator('li', { hasText: 'Ticket received from the sender' })).toHaveAttribute('data-state', 'done')
+  await expect(
+    other.getByRole('region', { name: 'Receive steps' }).locator('li', { hasText: 'Ticket received from the sender' }),
+  ).toHaveAttribute('data-state', 'done')
   expect(recipientCalls).toHaveLength(count)
   await otherContext.close()
 })

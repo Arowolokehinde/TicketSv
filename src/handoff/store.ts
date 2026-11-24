@@ -56,8 +56,13 @@ function signTransition(old: SenderRecord, next: SenderRecord): { released: bool
     return { released: true }
   }
   const retried =
-    !!before && !!after && after.id !== before.id && before.outcome !== 'complete' && before.walletAsked !== false &&
-    after.outcome === 'pending' && after.walletAsked === false
+    !!before &&
+    !!after &&
+    after.id !== before.id &&
+    before.outcome !== 'complete' &&
+    before.walletAsked !== false &&
+    after.outcome === 'pending' &&
+    after.walletAsked === false
   if (!retried) monotonic(before, after)
   if (before?.walletAsked && after?.id === before.id && !after.walletAsked) throw Error('A wallet request cannot be unrecorded.')
   return { released: false }
@@ -242,7 +247,8 @@ export function createStore<T extends { id: string; revision: number }>(
         r.result.onversionchange = () => r.result.close()
         resolve(r.result)
       }
-      r.onerror = r.onblocked = () => reject(Error('Handoff storage unavailable. No new action can start. A private window may block saved data.'))
+      r.onerror = r.onblocked = () =>
+        reject(Error('Handoff storage unavailable. No new action can start. A private window may block saved data.'))
     })
   return {
     async load(id) {

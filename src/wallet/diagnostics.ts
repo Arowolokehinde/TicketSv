@@ -5,10 +5,18 @@ export type WalletFailureResponse = ErrorSummary & { method: string; status: num
 export function summarizeError(value: unknown): ErrorSummary {
   if (value === null || typeof value !== 'object') return { message: 'No structured error was available.' }
   const error = value as Record<string, unknown>
-  const text = (value: unknown) => typeof value === 'string'
-    ? value.slice(0, 2048).replace(/[0-9a-fA-F]{64,}/g, '[hex omitted]').slice(0, 600) : undefined
-  return { name: text(error.name), message: text(error.message),
-    code: typeof error.code === 'number' && Number.isFinite(error.code) ? error.code : text(error.code) }
+  const text = (value: unknown) =>
+    typeof value === 'string'
+      ? value
+          .slice(0, 2048)
+          .replace(/[0-9a-fA-F]{64,}/g, '[hex omitted]')
+          .slice(0, 600)
+      : undefined
+  return {
+    name: text(error.name),
+    message: text(error.message),
+    code: typeof error.code === 'number' && Number.isFinite(error.code) ? error.code : text(error.code),
+  }
 }
 
 export async function readFailureResponse(response: Response, method: string): Promise<WalletFailureResponse> {
@@ -27,8 +35,14 @@ export async function readFailureResponse(response: Response, method: string): P
     }
     const bytes = new Uint8Array(size)
     let offset = 0
-    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length }
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset)
+      offset += chunk.length
+    }
     return { ...result, ...summarizeError(JSON.parse(new TextDecoder().decode(bytes))) }
-  } catch { return result }
-  finally { void reader.cancel().catch(() => {}) }
+  } catch {
+    return result
+  } finally {
+    void reader.cancel().catch(() => {})
+  }
 }

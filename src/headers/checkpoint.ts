@@ -5,6 +5,7 @@ export const CHECKPOINT = Object.freeze({ height: 1762324, hash: '00000000077273
 export const HEADER_COLLECTION_WINDOW = 4096
 // Heights fit the backend PostgreSQL integer and all range arithmetic stays exact.
 export function validHeaderHeight(height: number): boolean {
- return Number.isSafeInteger(height) && height >= CHECKPOINT.height && height <= 0x7fffffff
+  return Number.isSafeInteger(height) && height >= CHECKPOINT.height && height <= 0x7fffffff
 }
-export const HEADER_TRUST = 'Checkpoint, linkage and declared-target proof of work checked. Source comparison may be performed by the TicketSV cache server. Full difficulty adjustment and best-chain selection are not checked.'
+export const HEADER_TRUST =
+  'Checkpoint, linkage and declared-target proof of work checked. Source comparison may be performed by the TicketSV cache server. Full difficulty adjustment and best-chain selection are not checked.'

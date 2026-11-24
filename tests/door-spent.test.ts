@@ -28,7 +28,11 @@ function provider(spends: Record<string, Transaction>, hex: Record<string, strin
     }
     const tx = /\/tx\/([0-9a-f]{64})\/hex$/.exec(url)
     if (tx) {
-      const found = hex[tx[1]] ?? Object.values(spends).find(t => t.id('hex') === tx[1])?.toHex()
+      const found =
+        hex[tx[1]] ??
+        Object.values(spends)
+          .find(t => t.id('hex') === tx[1])
+          ?.toHex()
       return found ? new Response(found) : new Response('Not Found', { status: 404 })
     }
     return new Response('unexpected', { status: 500 })
@@ -110,13 +114,7 @@ describe('saved spent list', () => {
   it('follows each ticket through its validated transfers and records the spent outputs', async () => {
     const { f, a, origin } = await fixture()
     const progress: number[] = []
-    const list = await walkTickets(
-      'conflict-event',
-      [f.base],
-      signal(),
-      done => progress.push(done),
-      provider({ [origin]: a }).get,
-    )
+    const list = await walkTickets('conflict-event', [f.base], signal(), done => progress.push(done), provider({ [origin]: a }).get)
     expect(list.tickets).toEqual([origin])
     expect(list.spent).toEqual([origin])
     expect(Number.isFinite(Date.parse(list.checkedAt))).toBe(true)

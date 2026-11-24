@@ -25,7 +25,8 @@ function memory(initial: HandoffSettlement) {
   let r = structuredClone(initial)
   return {
     load: async () => structuredClone(r),
-    list: async () => [r],remove: async () => {},
+    list: async () => [r],
+    remove: async () => {},
     save: async (n: HandoffSettlement, rev?: number) => {
       if (rev !== r.revision) throw Error('Changed')
       r = readSettlement(n, r)

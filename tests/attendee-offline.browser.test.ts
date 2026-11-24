@@ -129,7 +129,10 @@ test('Dashboard saves the current mined package and device library survives logo
   })
   await context.route('**/api/tickets', r => r.fulfill({ json: { tickets: [f.record], nextOffset: null } }))
   await context.route('**/api/tickets/requests**', r => r.fulfill({ json: { requests: [], nextOffset: null } }))
-  await context.route(url => url.pathname === `/api/tickets/${f.record.id}`, r => r.fulfill({ json: oldRecord }))
+  await context.route(
+    url => url.pathname === `/api/tickets/${f.record.id}`,
+    r => r.fulfill({ json: oldRecord }),
+  )
   await mount(page)
   await page.getByRole('button', { name: 'View ticket', exact: true }).click()
   // An unmined package cannot be saved: the save step appears only after mining is checked and verified.
@@ -369,7 +372,10 @@ test('an account change during preparation prevents the device save', async ({ p
   auth.setSession({ identityKey: f.identity, network: 'testnet', expiresAt: new Date(Date.now() + 3600000).toISOString() })
   await context.route('**/api/tickets', r => r.fulfill({ json: { tickets: [f.record], nextOffset: null } }))
   await context.route('**/api/tickets/requests**', r => r.fulfill({ json: { requests: [], nextOffset: null } }))
-  await context.route(url => url.pathname === `/api/tickets/${f.record.id}`, r => r.fulfill({ json: f.record }))
+  await context.route(
+    url => url.pathname === `/api/tickets/${f.record.id}`,
+    r => r.fulfill({ json: f.record }),
+  )
   await context.route('https://arcade-v2-testnet-us-1.bsvblockchain.tech/tx/**', r =>
     r.fulfill({
       json: { txid: f.record.txid, txStatus: 'MINED', blockHeight: a.height, blockHash: a.hash, merklePath: f.tx.merklePath!.toHex() },
@@ -412,7 +418,13 @@ test('an update waits for Reload, reloads every TicketSV tab together and keeps 
       const file = pathname.startsWith('/assets/') && !pathname.includes('..') ? 'dist' + pathname : 'dist/index.html'
       res.setHeader(
         'Content-Type',
-        file.endsWith('.js') ? 'application/javascript' : file.endsWith('.css') ? 'text/css' : file.endsWith('.wasm') ? 'application/wasm' : 'text/html',
+        file.endsWith('.js')
+          ? 'application/javascript'
+          : file.endsWith('.css')
+            ? 'text/css'
+            : file.endsWith('.wasm')
+              ? 'application/wasm'
+              : 'text/html',
       )
       res.end(await readFile(file))
     } catch {
@@ -442,8 +454,8 @@ test('an update waits for Reload, reloads every TicketSV tab together and keeps 
     await page.waitForTimeout(500)
     for (const tab of [page, other]) expect(await tab.evaluate(() => (window as unknown as { marker?: boolean }).marker)).toBe(true)
     await banner.getByRole('button', { name: 'Reload', exact: true }).click()
+    // Mid-reload there is no page to ask yet; keep polling until the new page answers.
     for (const tab of [page, other])
-      // Mid-reload there is no page to ask yet; keep polling until the new page answers.
       await expect
         .poll(() => tab.evaluate(() => (window as unknown as { marker?: boolean }).marker ?? false).catch(() => true), { timeout: 15000 })
         .toBe(false)

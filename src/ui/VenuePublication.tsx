@@ -56,7 +56,11 @@ export function VenuePublication({ event, onClose }: { event: AccountEvent; onCl
         </div>
       </div>
       <p className="event-saved" role="status">
-        {state.published ? (current ? 'Published on Events' : "Published · you have saved changes that aren't public yet") : 'Private · Not published'}
+        {state.published
+          ? current
+            ? 'Published on Events'
+            : "Published · you have saved changes that aren't public yet"
+          : 'Private · Not published'}
       </p>
       {state.published && (
         <p>

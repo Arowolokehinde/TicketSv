@@ -1,6 +1,11 @@
 export type FeasibilityGateId =
-  | 'wallet-connect' | 'offline-signing' | 'issuer-verification'
-  | 'offline-reopen' | 'arc-access' | 'wallet-import' | 'conflicting-transfers'
+  | 'wallet-connect'
+  | 'offline-signing'
+  | 'issuer-verification'
+  | 'offline-reopen'
+  | 'arc-access'
+  | 'wallet-import'
+  | 'conflicting-transfers'
 
 export type FeasibilityGate = {
   id: FeasibilityGateId

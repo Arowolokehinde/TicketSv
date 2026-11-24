@@ -6,12 +6,14 @@ export type WalletTransport = 'desktop-http' | 'desktop-https' | 'browser-native
 // A native mobile browser must not silently route a handoff to desktop localhost.
 // An explicit connection preference still takes precedence over bridge detection.
 export function preferredWalletTransport(): WalletTransport {
- try {
-  const saved = sessionStorage.getItem('ticketsv-wallet-transport')
-  if (saved === 'desktop-http' || saved === 'desktop-https' || saved === 'browser-native') return saved
- } catch { /* Storage may be unavailable; inspect the native bridge below. */ }
- const host = typeof window === 'undefined' ? undefined : window as Window & { ReactNativeWebView?: { postMessage?: unknown } }
- return typeof host?.ReactNativeWebView?.postMessage === 'function' ? 'browser-native' : 'desktop-http'
+  try {
+    const saved = sessionStorage.getItem('ticketsv-wallet-transport')
+    if (saved === 'desktop-http' || saved === 'desktop-https' || saved === 'browser-native') return saved
+  } catch {
+    /* Storage may be unavailable; inspect the native bridge below. */
+  }
+  const host = typeof window === 'undefined' ? undefined : (window as Window & { ReactNativeWebView?: { postMessage?: unknown } })
+  return typeof host?.ReactNativeWebView?.postMessage === 'function' ? 'browser-native' : 'desktop-http'
 }
 export type ProbeClient = Pick<WalletInterface, 'getNetwork' | 'getVersion' | 'getPublicKey'>
 export type ProbeCall = { method: keyof ProbeClient; status: 'started' | 'returned' | 'failed' }
@@ -22,13 +24,17 @@ const messages = {
   'wrong-network': 'The wallet is not on testnet. Switch its selected network to testnet, then retry.',
   'invalid-response': 'The wallet returned an invalid response. Check the wallet version and selected connection method.',
   'missing-bridge': 'The native wallet bridge is unavailable. Open this app inside BSV Browser, or select a desktop connection.',
-  'request-failed': 'The wallet request failed or was declined. Check that BSV Desktop is running, review its permission prompt, and confirm the selected connection method. Browser connection restrictions can also block access.',
-  'cancelled': 'Connection cancelled. Any remaining native wallet prompt must be dismissed in the wallet.',
-  'timeout': 'The wallet did not complete the check within 30 seconds. Check its permission prompt and connection method, then retry.',
+  'request-failed':
+    'The wallet request failed or was declined. Check that BSV Desktop is running, review its permission prompt, and confirm the selected connection method. Browser connection restrictions can also block access.',
+  cancelled: 'Connection cancelled. Any remaining native wallet prompt must be dismissed in the wallet.',
+  timeout: 'The wallet did not complete the check within 30 seconds. Check its permission prompt and connection method, then retry.',
 } as const
 export class ConnectionError extends Error {
   readonly code: keyof typeof messages
-  constructor(code: keyof typeof messages) { super(messages[code]); this.code = code }
+  constructor(code: keyof typeof messages) {
+    super(messages[code])
+    this.code = code
+  }
 }
 function abortReason(signal: AbortSignal): ConnectionError {
   return signal.reason instanceof ConnectionError ? signal.reason : new ConnectionError('cancelled')
@@ -39,14 +45,28 @@ function checkAbort(signal: AbortSignal): void {
 
 // Cancellation stops this experiment, including later calls, even if a native
 // bridge cannot dismiss the original wallet prompt. No late result is accepted.
-async function invoke<T>(method: keyof ProbeClient, operation: () => Promise<T>, signal: AbortSignal, log: (entry: ProbeCall) => void): Promise<T> {
+async function invoke<T>(
+  method: keyof ProbeClient,
+  operation: () => Promise<T>,
+  signal: AbortSignal,
+  log: (entry: ProbeCall) => void,
+): Promise<T> {
   checkAbort(signal)
   log({ method, status: 'started' })
   try {
     const result = await new Promise<T>((resolve, reject) => {
-      const abort = () => { signal.removeEventListener('abort', abort); reject(abortReason(signal)) }
+      const abort = () => {
+        signal.removeEventListener('abort', abort)
+        reject(abortReason(signal))
+      }
       signal.addEventListener('abort', abort, { once: true })
-      Promise.resolve().then(() => { checkAbort(signal); return operation() }).then(resolve, reject).finally(() => signal.removeEventListener('abort', abort))
+      Promise.resolve()
+        .then(() => {
+          checkAbort(signal)
+          return operation()
+        })
+        .then(resolve, reject)
+        .finally(() => signal.removeEventListener('abort', abort))
     })
     checkAbort(signal)
     log({ method, status: 'returned' })
@@ -57,18 +77,25 @@ async function invoke<T>(method: keyof ProbeClient, operation: () => Promise<T>,
     throw error instanceof ConnectionError ? error : new ConnectionError('request-failed')
   }
 }
-export async function probeWallet(client: ProbeClient, signal: AbortSignal, log: (entry: ProbeCall) => void = () => {}): Promise<ConnectionEvidence> {
+export async function probeWallet(
+  client: ProbeClient,
+  signal: AbortSignal,
+  log: (entry: ProbeCall) => void = () => {},
+): Promise<ConnectionEvidence> {
   const network = await invoke('getNetwork', () => client.getNetwork({}), signal, log)
   if (network?.network !== BSV_NETWORK) throw new ConnectionError('wrong-network')
   const version = await invoke('getVersion', () => client.getVersion({}), signal, log)
-  if (typeof version?.version !== 'string' || version.version.length < 7 || version.version.length > 30) throw new ConnectionError('invalid-response')
+  if (typeof version?.version !== 'string' || version.version.length < 7 || version.version.length > 30)
+    throw new ConnectionError('invalid-response')
   const key = await invoke('getPublicKey', () => client.getPublicKey({ identityKey: true }), signal, log)
   try {
     const { PublicKey } = await import('@bsv/sdk/primitives')
     if (typeof key?.publicKey !== 'string' || !/^(02|03)[0-9a-fA-F]{64}$/.test(key.publicKey)) throw new Error('invalid')
     const parsed = PublicKey.fromString(key.publicKey)
     if (!parsed.validate() || parsed.toString().toLowerCase() !== key.publicKey.toLowerCase()) throw new Error('invalid')
-  } catch { throw new ConnectionError('invalid-response') }
+  } catch {
+    throw new ConnectionError('invalid-response')
+  }
   checkAbort(signal)
   const finalNetwork = await invoke('getNetwork', () => client.getNetwork({}), signal, log)
   if (finalNetwork?.network !== BSV_NETWORK) throw new ConnectionError('wrong-network')
@@ -77,21 +104,40 @@ export async function probeWallet(client: ProbeClient, signal: AbortSignal, log:
 
 // Race the entire attempt, including lazy imports. Imports cannot be cancelled,
 // so the checks in connectSelectedWallet also prevent calls after they arrive.
-export function connectWallet(transport: WalletTransport, signal: AbortSignal, log: (entry: ProbeCall) => void): Promise<ConnectionEvidence> {
+export function connectWallet(
+  transport: WalletTransport,
+  signal: AbortSignal,
+  log: (entry: ProbeCall) => void,
+): Promise<ConnectionEvidence> {
   return new Promise((resolve, reject) => {
-    const abort = () => { signal.removeEventListener('abort', abort); reject(abortReason(signal)) }
-    if (signal.aborted) { abort(); return }
+    const abort = () => {
+      signal.removeEventListener('abort', abort)
+      reject(abortReason(signal))
+    }
+    if (signal.aborted) {
+      abort()
+      return
+    }
     signal.addEventListener('abort', abort, { once: true })
-    connectSelectedWallet(transport, signal, log).then(resolve, reject)
+    connectSelectedWallet(transport, signal, log)
+      .then(resolve, reject)
       .finally(() => signal.removeEventListener('abort', abort))
   })
 }
 
-async function connectSelectedWallet(transport: WalletTransport, signal: AbortSignal, log: (entry: ProbeCall) => void): Promise<ConnectionEvidence> {
+async function connectSelectedWallet(
+  transport: WalletTransport,
+  signal: AbortSignal,
+  log: (entry: ProbeCall) => void,
+): Promise<ConnectionEvidence> {
   return probeWallet(await openWalletClient(transport, signal), signal, log)
 }
 
-export async function openWalletClient(transport: WalletTransport, signal: AbortSignal, onFailureResponse?: (failure: WalletFailureResponse) => void): Promise<WalletInterface> {
+export async function openWalletClient(
+  transport: WalletTransport,
+  signal: AbortSignal,
+  onFailureResponse?: (failure: WalletFailureResponse) => void,
+): Promise<WalletInterface> {
   checkAbort(signal)
   try {
     const { WalletClient } = await import('@bsv/sdk/wallet')
@@ -101,8 +147,11 @@ export async function openWalletClient(transport: WalletTransport, signal: Abort
     if (transport === 'browser-native') {
       const { default: ReactNativeWebView } = await import('@bsv/sdk/wallet/substrates/ReactNativeWebView')
       checkAbort(signal)
-      try { substrate = new ReactNativeWebView('*', CONNECTION_TIMEOUT_MS) }
-      catch { throw new ConnectionError('missing-bridge') }
+      try {
+        substrate = new ReactNativeWebView('*', CONNECTION_TIMEOUT_MS)
+      } catch {
+        throw new ConnectionError('missing-bridge')
+      }
     } else {
       const { default: HTTPWalletJSON } = await import('@bsv/sdk/wallet/substrates/HTTPWalletJSON')
       checkAbort(signal)

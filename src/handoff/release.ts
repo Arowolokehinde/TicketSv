@@ -205,7 +205,11 @@ export async function checkSpentOutputs(
   const sender = readSender(value)
   if (!sender.funding?.txid || sender.funding.index === undefined) throw Error('This transfer has no saved fee output.')
   await guard(sender, wallet, signal)()
-  const ticket: OutputRelease = { basket: 'ticketsv-tickets', outpoint: `${sender.ticket.pkg.current.txid}.${sender.ticket.pkg.current.index}`, attempts: [] },
+  const ticket: OutputRelease = {
+      basket: 'ticketsv-tickets',
+      outpoint: `${sender.ticket.pkg.current.txid}.${sender.ticket.pkg.current.index}`,
+      attempts: [],
+    },
     fee: OutputRelease = { basket: FUNDING_BASKET, outpoint: `${sender.funding.txid}.${sender.funding.index}`, attempts: [] }
   return [await observe(wallet, ticket, signal), await observe(wallet, fee, signal)]
 }

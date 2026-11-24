@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 import { accountApi } from './helpers/account-api.ts'
-test.beforeEach(async ({ context }) => { await accountApi(context, false) })
+test.beforeEach(async ({ context }) => {
+  await accountApi(context, false)
+})
 
 const identity = '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'
 async function wallet(page: Page, network = 'testnet', endpoint = 'http://localhost:3321') {
@@ -35,12 +37,14 @@ test('wrong network stays disconnected and can be retried', async ({ page }) => 
   await expect(page.getByRole('alert')).toContainText('not on testnet')
   expect(calls).toEqual(['getNetwork'])
   await expect(page.getByRole('button', { name: 'Connect and sign in', exact: true })).toBeEnabled()
-
 })
 
 test('closing a pending connection ignores late responses and restores focus', async ({ page }) => {
   await page.addInitScript(() => {
-    Object.assign(window, { testMessages: [], ReactNativeWebView: { postMessage: (value: string) => (window as unknown as { testMessages: string[] }).testMessages.push(value) } })
+    Object.assign(window, {
+      testMessages: [],
+      ReactNativeWebView: { postMessage: (value: string) => (window as unknown as { testMessages: string[] }).testMessages.push(value) },
+    })
   })
   await page.goto('/scanner')
   const trigger = page.getByRole('button', { name: 'Connect wallet', exact: true })
@@ -53,13 +57,16 @@ test('closing a pending connection ignores late responses and restores focus', a
   await expect(trigger).toBeFocused()
   await page.evaluate(() => {
     const request = JSON.parse((window as unknown as { testMessages: string[] }).testMessages[0]!)
-    window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({ type: 'CWI', isInvocation: false, id: request.id, status: 'success', result: { network: 'testnet' } }) }))
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: JSON.stringify({ type: 'CWI', isInvocation: false, id: request.id, status: 'success', result: { network: 'testnet' } }),
+      }),
+    )
   })
   await trigger.click()
   await expect(page.getByRole('button', { name: 'Connect and sign in', exact: true })).toBeEnabled()
   await expect(page.getByText(identity, { exact: true })).toHaveCount(0)
 })
-
 
 test('wallet choices hide transport details and keep HTTPS an explicit desktop setting', async ({ page }) => {
   const httpCalls = await wallet(page)
@@ -101,12 +108,21 @@ test('late session 401 cannot clear a newer authenticated refresh', async ({ pag
   await page.goto('/venue/my-events')
   await expect(page.getByRole('heading', { name: 'My events', exact: true })).toBeVisible()
   let release!: () => void, started!: () => void
-  const held = new Promise<void>(resolve => { release = resolve })
-  const pending = new Promise<void>(resolve => { started = resolve })
+  const held = new Promise<void>(resolve => {
+    release = resolve
+  })
+  const pending = new Promise<void>(resolve => {
+    started = resolve
+  })
   let first = true
   await page.route('**/api/auth/session', async route => {
-    if (!first) { await route.fallback(); return }
-    first = false; started(); await held
+    if (!first) {
+      await route.fallback()
+      return
+    }
+    first = false
+    started()
+    await held
     await route.fulfill({ status: 401, json: { error: 'Expired earlier session' } })
   })
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
@@ -123,11 +139,18 @@ test('an expired event request invalidates an older pending session response', a
   await page.goto('/venue')
   await expect(page.getByLabel('Event name', { exact: true })).toBeVisible()
   let release!: () => void, started!: () => void
-  const held = new Promise<void>(resolve => { release = resolve })
-  const pending = new Promise<void>(resolve => { started = resolve })
+  const held = new Promise<void>(resolve => {
+    release = resolve
+  })
+  const pending = new Promise<void>(resolve => {
+    started = resolve
+  })
   await page.route('**/api/auth/session', async route => {
-    started(); await held
-    await route.fulfill({ json: { identityKey: '02' + '11'.repeat(32), network: 'testnet', expiresAt: new Date(Date.now() + 3600_000).toISOString() } })
+    started()
+    await held
+    await route.fulfill({
+      json: { identityKey: '02' + '11'.repeat(32), network: 'testnet', expiresAt: new Date(Date.now() + 3600_000).toISOString() },
+    })
   })
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
   await pending
@@ -140,7 +163,8 @@ test('an expired event request invalidates an older pending session response', a
   await page.getByRole('button', { name: 'Save draft', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Connect your wallet to continue.' })).toBeVisible()
   const completed = page.waitForResponse(response => response.url().endsWith('/api/auth/session'))
-  release(); await completed
+  release()
+  await completed
   await expect(page.getByRole('button', { name: 'Create event', exact: true })).toHaveCount(0)
 })
 

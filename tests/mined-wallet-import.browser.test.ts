@@ -32,7 +32,10 @@ test.beforeAll(async () => {
             const source = await readFile(target, 'utf8')
             return (
               source.slice(0, source.indexOf('export async function verifySigningEvidence')) +
-              `export async function verifySigningEvidence(evidence,snapshot){if(!snapshot)throw new Error('Verification incomplete');return {txid:evidence.txid,anchors:[1],subjectMined:!!Transaction.fromAtomicBEEF(evidence.atomicBeef).merklePath,proofBytes:evidence.atomicBeef.length,snapshotId:snapshot.id}}`
+              'export async function verifySigningEvidence(evidence,snapshot){' +
+              "if(!snapshot)throw new Error('Verification incomplete');" +
+              'return {txid:evidence.txid,anchors:[1],subjectMined:!!Transaction.fromAtomicBEEF(evidence.atomicBeef).merklePath,' +
+              'proofBytes:evidence.atomicBeef.length,snapshotId:snapshot.id}}'
             )
           }
         },

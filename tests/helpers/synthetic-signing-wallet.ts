@@ -24,21 +24,29 @@ export function syntheticSigningWallet() {
     createAction: async (args: CreateActionArgs) => {
       const outputs = args.outputs!.map(o => ({ satoshis: o.satoshis, lockingScript: LockingScript.fromHex(o.lockingScript) }))
       if (!args.inputs?.length) {
-        const tx = new Transaction(1, [{ sourceTransaction: funding, sourceOutputIndex: 0, unlockingScript: UnlockingScript.fromASM('OP_1') }], [...outputs, { satoshis: 9998, lockingScript: LockingScript.fromASM('OP_DROP OP_TRUE') }])
+        const tx = new Transaction(
+          1,
+          [{ sourceTransaction: funding, sourceOutputIndex: 0, unlockingScript: UnlockingScript.fromASM('OP_1') }],
+          [...outputs, { satoshis: 9998, lockingScript: LockingScript.fromASM('OP_DROP OP_TRUE') }],
+        )
         return { tx: tx.toAtomicBEEF(), txid: tx.id('hex'), noSendChange: [`${tx.id('hex')}.1`] }
       }
       const parent = Transaction.fromAtomicBEEF(args.inputBEEF!)
-      draft = new Transaction(1, [
-        { sourceTransaction: parent, sourceOutputIndex: 0, unlockingScript: new UnlockingScript() },
-        { sourceTransaction: parent, sourceOutputIndex: 1, unlockingScript: UnlockingScript.fromASM('OP_1') },
-      ], [...outputs, { satoshis: 9997, lockingScript: LockingScript.fromASM('OP_DROP OP_TRUE') }])
+      draft = new Transaction(
+        1,
+        [
+          { sourceTransaction: parent, sourceOutputIndex: 0, unlockingScript: new UnlockingScript() },
+          { sourceTransaction: parent, sourceOutputIndex: 1, unlockingScript: UnlockingScript.fromASM('OP_1') },
+        ],
+        [...outputs, { satoshis: 9997, lockingScript: LockingScript.fromASM('OP_DROP OP_TRUE') }],
+      )
       return { signableTransaction: { tx: signingDraftBytes(draft), reference: 'dGVzdA==' } }
     },
     signAction: async (args: SignActionArgs) => {
-      for (const [index, spend] of Object.entries(args.spends)) draft.inputs[Number(index)]!.unlockingScript = UnlockingScript.fromHex(spend.unlockingScript)
+      for (const [index, spend] of Object.entries(args.spends))
+        draft.inputs[Number(index)]!.unlockingScript = UnlockingScript.fromHex(spend.unlockingScript)
       return { tx: draft.toAtomicBEEF(), txid: draft.id('hex') }
     },
   } as unknown as WalletInterface
   return wallet
 }
-

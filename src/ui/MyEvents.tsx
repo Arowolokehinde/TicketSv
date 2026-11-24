@@ -100,7 +100,11 @@ export function MyEvents(): React.JSX.Element {
     }
   }
   const review = (request: AttendeeRequest) =>
-    void open(request.eventId, event => setIssuing({ event, review: request }), events.find(item => item.id === request.eventId))
+    void open(
+      request.eventId,
+      event => setIssuing({ event, review: request }),
+      events.find(item => item.id === request.eventId),
+    )
   async function more() {
     if (nextOffset === null || loadingMore) return
     setLoadingMore(true)

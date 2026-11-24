@@ -53,7 +53,8 @@ export function doorDecision(policy: Policy, existing: Admission | undefined, pk
 export function savedSpend(list: SpentList | undefined, pkg: TicketPackage): SpendCheck {
   if (!list || list.id !== pkg.issuance.eventId) return { state: 'unknown', source: 'none' }
   const checkedAt = list.checkedAt
-  if (!list.tickets.includes(outpoint(pkg.issuance.origin.txid, pkg.issuance.origin.index))) return { state: 'unknown', source: 'saved', checkedAt }
+  if (!list.tickets.includes(outpoint(pkg.issuance.origin.txid, pkg.issuance.origin.index)))
+    return { state: 'unknown', source: 'saved', checkedAt }
   return { state: list.spent.includes(outpoint(pkg.current.txid, pkg.current.index)) ? 'spent' : 'unspent', source: 'saved', checkedAt }
 }
 export function admit(existing: Admission | undefined, eventId: string, pkg: TicketPackage, mined: boolean, now: string): Admission {

@@ -303,13 +303,11 @@ it('blocks unavailable publications without offering manual identity entry or wa
   try {
     await mount(page, 'http://127.0.0.1:4175/offline/handoff?step=receive')
     await page.evaluate(() => window.DashboardHandoffTest.mount())
-    await page
-      .getByLabel('Load invitation file', { exact: true })
-      .setInputFiles({
-        name: 'invitation.json',
-        mimeType: 'application/json',
-        buffer: Buffer.from(JSON.stringify(invitationFor(f.source, 1762424))),
-      })
+    await page.getByLabel('Load invitation file', { exact: true }).setInputFiles({
+      name: 'invitation.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(invitationFor(f.source, 1762424))),
+    })
     await page.getByRole('alert').filter({ hasText: 'not published' }).waitFor()
     expect(await page.getByRole('button', { name: 'Create receiving request', exact: true }).isDisabled()).toBe(true)
     expect(await page.getByRole('button', { name: 'Prepare this device online', exact: true }).isDisabled()).toBe(true)

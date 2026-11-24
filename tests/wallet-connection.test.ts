@@ -14,7 +14,12 @@ it('reads testnet, version and identity, then rechecks network with a safe metho
   const wallet = client()
   const result = await probeWallet(wallet, new AbortController().signal, entry => log.push(entry))
   expect(result).toMatchObject({ network: 'testnet', identityKey, version: 'test-v1.0.0' })
-  expect(log.filter(entry => entry.status === 'started').map(entry => entry.method)).toEqual(['getNetwork', 'getVersion', 'getPublicKey', 'getNetwork'])
+  expect(log.filter(entry => entry.status === 'started').map(entry => entry.method)).toEqual([
+    'getNetwork',
+    'getVersion',
+    'getPublicKey',
+    'getNetwork',
+  ])
   expect(wallet.getPublicKey).toHaveBeenCalledWith({ identityKey: true })
   expect(JSON.stringify(log)).not.toContain(identityKey)
 })
@@ -38,7 +43,12 @@ it.each(['bad-key', '02' + 'ff'.repeat(32)])('rejects an invalid public key: %s'
 it('cancels a pending request and never proceeds when its late result arrives', async () => {
   const wallet = client()
   let resolve!: (value: { network: 'testnet' }) => void
-  vi.mocked(wallet.getNetwork).mockImplementationOnce(() => new Promise(done => { resolve = done }))
+  vi.mocked(wallet.getNetwork).mockImplementationOnce(
+    () =>
+      new Promise(done => {
+        resolve = done
+      }),
+  )
   const controller = new AbortController()
   const pending = probeWallet(wallet, controller.signal)
   await Promise.resolve()
@@ -55,6 +65,8 @@ it('preserves timeout as a reason without exposing wallet error text', async () 
   expect(wallet.getNetwork).not.toHaveBeenCalled()
   vi.mocked(wallet.getNetwork).mockRejectedValue(new Error('sensitive wallet response'))
   const log: ProbeCall[] = []
-  await expect(probeWallet(wallet, new AbortController().signal, entry => log.push(entry))).rejects.toMatchObject({ code: 'request-failed' })
+  await expect(probeWallet(wallet, new AbortController().signal, entry => log.push(entry))).rejects.toMatchObject({
+    code: 'request-failed',
+  })
   expect(JSON.stringify(log)).not.toContain('sensitive')
 })

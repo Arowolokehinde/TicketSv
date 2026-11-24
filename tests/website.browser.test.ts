@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test'
 import { accountApi } from './helpers/account-api.ts'
-test.beforeEach(async ({ context }) => { await accountApi(context) })
+test.beforeEach(async ({ context }) => {
+  await accountApi(context)
+})
 
 test('homepage is the native website with working journey and navigation', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
@@ -12,10 +14,17 @@ test('homepage is the native website with working journey and navigation', async
   await expect(page.locator('.motion-row')).toBeHidden()
   const hero = page.locator('.hero-object')
   const originalBounds = await hero.boundingBox()
-  await page.locator('.motion-row').evaluate(element => { element.style.visibility = 'visible' })
+  await page.locator('.motion-row').evaluate(element => {
+    element.style.visibility = 'visible'
+  })
   expect(await hero.boundingBox()).toEqual(originalBounds)
-  await page.locator('.motion-row').evaluate(element => { element.style.removeProperty('visibility') })
-  await page.getByRole('link', { name: /^Open dashboard/ }).first().click()
+  await page.locator('.motion-row').evaluate(element => {
+    element.style.removeProperty('visibility')
+  })
+  await page
+    .getByRole('link', { name: /^Open dashboard/ })
+    .first()
+    .click()
   await expect(page).toHaveURL(/\/tickets$/)
   await expect(page.getByRole('heading', { name: 'Good times. Great memories.', exact: true })).toBeVisible()
   await page.goBack()
@@ -44,7 +53,13 @@ test('workspaces have separate navigation and survive direct reloads', async ({ 
 })
 
 test('removed placeholder pages send old links to the real flows', async ({ page }) => {
-  for (const [from, to] of [['/tickets/sample', /\/tickets$/], ['/tickets/receive', /\/offline\/handoff\?step=receive$/], ['/tickets/transfer', /\/offline\/handoff\?step=prepare$/], ['/tickets/prepare', /\/tickets$/], ['/venue/prepare', /\/venue$/]] as const) {
+  for (const [from, to] of [
+    ['/tickets/sample', /\/tickets$/],
+    ['/tickets/receive', /\/offline\/handoff\?step=receive$/],
+    ['/tickets/transfer', /\/offline\/handoff\?step=prepare$/],
+    ['/tickets/prepare', /\/tickets$/],
+    ['/venue/prepare', /\/venue$/],
+  ] as const) {
     await page.goto(from)
     await expect(page).toHaveURL(to)
   }
@@ -54,10 +69,12 @@ test('product routes are responsive and make no external or wallet requests', as
   const outside: string[] = []
   const errors: string[] = []
   const origin = new URL(baseURL!).origin
-  page.on('request', request => { if (new URL(request.url()).origin !== origin) outside.push(request.url()) })
+  page.on('request', request => {
+    if (new URL(request.url()).origin !== origin) outside.push(request.url())
+  })
   page.on('websocket', socket => outside.push(socket.url()))
   page.on('pageerror', error => errors.push(error.message))
-  await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.fallback() : route.abort())
+  await page.route('**/*', route => (new URL(route.request().url()).origin === origin ? route.fallback() : route.abort()))
   const paths = ['/', '/tickets', '/tickets/receive', '/tickets/transfer', '/tickets/sample', '/venue', '/scanner']
   for (const root of ['/tickets', '/venue', '/scanner']) {
     for (const child of ['prepare', 'headers', 'activity']) paths.push(`${root}/${child}`)
@@ -88,7 +105,9 @@ test('landing FAQ explains the current saving and confirmation boundary', async 
 
 test('trailing-slash routes retain navigation state and keyboard users can skip navigation', async ({ page }) => {
   await page.goto('/tickets/')
-  await expect(page.getByRole('navigation', { name: 'Ticket holder navigation' }).getByRole('link', { name: 'Dashboard', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(
+    page.getByRole('navigation', { name: 'Ticket holder navigation' }).getByRole('link', { name: 'Dashboard', exact: true }),
+  ).toHaveAttribute('aria-current', 'page')
   await page.keyboard.press('Tab')
   await expect(page.getByRole('link', { name: 'Skip to content' })).toBeFocused()
   await page.keyboard.press('Enter')
@@ -118,7 +137,9 @@ test('landing header stays visible on scroll and section links leave headings un
   await page.evaluate(() => window.scrollTo(0, 900))
   await expect.poll(async () => (await header.boundingBox())!.y).toBe(0)
   for (const id of ['how', 'evidence', 'faq']) {
-    await page.evaluate(id => { location.hash = id }, id)
+    await page.evaluate(id => {
+      location.hash = id
+    }, id)
     await expect(page).toHaveURL(new RegExp(`#${id}$`))
     const heading = await page.locator(`#${id} > .section-label`).boundingBox()
     const box = await header.boundingBox()

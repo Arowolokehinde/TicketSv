@@ -23,9 +23,16 @@ it('does not send an old organiser draft after delayed image encoding and an acc
   const { saveAccountEvent } = await import('../src/events/api.ts')
   let release!: (value: ArrayBuffer) => void
   const image = new Blob(['image'], { type: 'image/png' })
-  image.arrayBuffer = () => new Promise(resolve => { release = resolve })
+  image.arrayBuffer = () =>
+    new Promise(resolve => {
+      release = resolve
+    })
   advanceAuthEpoch('account-a')
-  const saving = saveAccountEvent({ name: 'A draft', description: '', date: '2027-01-01', time: '18:00', timezone: 'UTC', venue: 'Hall', address: 'Street', image }, undefined, 'creation-id')
+  const saving = saveAccountEvent(
+    { name: 'A draft', description: '', date: '2027-01-01', time: '18:00', timezone: 'UTC', venue: 'Hall', address: 'Street', image },
+    undefined,
+    'creation-id',
+  )
   const rejected = expect(saving).rejects.toThrow('account changed')
   advanceAuthEpoch('account-b')
   release(new ArrayBuffer(0))

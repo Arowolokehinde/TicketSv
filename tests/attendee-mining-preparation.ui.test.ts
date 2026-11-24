@@ -28,9 +28,16 @@ beforeAll(async () => {
           if (id.endsWith('/src/verification/verifyTicket.ts'))
             return `export async function verifyTicket(){return {verdict:window.AttendeeMiningVerified?'verified':'incomplete',checks:[],presentedTransferMined:!!window.AttendeeMiningVerified,anchorHeights:[]}}`
           if (id.endsWith('/src/offline/attendee-cache.ts'))
-            return `export async function prepareAttendeeApp(){return window.AttendeeAppReady?'ready':'waiting'};export async function attendeeAppStatus(){return window.AttendeeAppReady?'ready':'waiting'};export async function prepareCachedApp(){return 'ready'};export class OfflineAppUnavailableError extends Error{}`
+            return (
+              "export async function prepareAttendeeApp(){return window.AttendeeAppReady?'ready':'waiting'};" +
+              "export async function attendeeAppStatus(){return window.AttendeeAppReady?'ready':'waiting'};" +
+              "export async function prepareCachedApp(){return 'ready'};export class OfflineAppUnavailableError extends Error{}"
+            )
           if (id.endsWith('/src/events/verify-venue-ticket.ts'))
-            return `export async function verifyVenueTicket(pkg){window.AttendeeMiningChecks.push(pkg.atomicBeefBase64);if(window.AttendeeMiningFail)throw Error('Temporary header delay');return {verdict:window.AttendeeMiningVerified?'verified':'incomplete',checks:[],presentedTransferMined:!!window.AttendeeMiningVerified,anchorHeights:[]}}`
+            return (
+              "export async function verifyVenueTicket(pkg){window.AttendeeMiningChecks.push(pkg.atomicBeefBase64);if(window.AttendeeMiningFail)throw Error('Temporary header delay');" +
+              "return {verdict:window.AttendeeMiningVerified?'verified':'incomplete',checks:[],presentedTransferMined:!!window.AttendeeMiningVerified,anchorHeights:[]}}"
+            )
         },
       },
     ],
@@ -67,7 +74,10 @@ it('prepares after mining detection and retains the mined envelope when header p
     initial.pkg!.atomicBeefBase64 = Utils.toBase64(f.tx.toAtomicBEEF())
     await context.route('**/api/tickets', route => route.fulfill({ json: { tickets: [initial], nextOffset: null } }))
     await context.route('**/api/tickets/requests', route => route.fulfill({ json: { requests: [], nextOffset: null } }))
-    await context.route(url => url.pathname === `/api/tickets/${initial.id}`, route => route.fulfill({ json: initial }))
+    await context.route(
+      url => url.pathname === `/api/tickets/${initial.id}`,
+      route => route.fulfill({ json: initial }),
+    )
     await context.route('https://arcade-v2-testnet-us-1.bsvblockchain.tech/tx/**', route =>
       route.fulfill({
         json: { txid: initial.txid, txStatus: 'MINED', blockHeight: 1762324, blockHash: '00'.repeat(32), merklePath: proof },
@@ -124,7 +134,10 @@ it('reveals each next action only after success, retains retries, and resumes sa
       auth.setSession({ identityKey: f.identity, network: 'testnet', expiresAt: new Date(Date.now() + 3600000).toISOString() })
       await context.route('**/api/tickets', r => r.fulfill({ json: { tickets: [f.record], nextOffset: null } }))
       await context.route('**/api/tickets/requests', r => r.fulfill({ json: { requests: [], nextOffset: null } }))
-      await context.route(url => url.pathname === `/api/tickets/${f.record.id}`, r => r.fulfill({ json: f.record }))
+      await context.route(
+        url => url.pathname === `/api/tickets/${f.record.id}`,
+        r => r.fulfill({ json: f.record }),
+      )
       await context.route('https://arcade-v2-testnet-us-1.bsvblockchain.tech/tx/**', r => {
         providerCalls++
         return r.fulfill({

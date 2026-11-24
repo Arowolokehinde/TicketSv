@@ -11,7 +11,7 @@ test('harness is honest, reloadable and inert without a wallet installed', async
   page.on('websocket', socket => sockets.push(socket.url()))
   page.on('pageerror', error => errors.push(error.message))
   // Fail closed if a future startup hook tries to contact any remote or local wallet service.
-  await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort())
+  await page.route('**/*', route => (new URL(route.request().url()).origin === origin ? route.continue() : route.abort()))
 
   for (let load = 0; load < 2; load++) {
     if (load === 0) await page.goto('/dev/feasibility')
@@ -25,7 +25,9 @@ test('harness is honest, reloadable and inert without a wallet installed', async
     await page.waitForTimeout(1000)
     // The only worker is TicketSV's own offline app cache, which never contacts a wallet.
     expect(
-      await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).map(r => r.active?.scriptURL ?? r.installing?.scriptURL)),
+      await page.evaluate(async () =>
+        (await navigator.serviceWorker.getRegistrations()).map(r => r.active?.scriptURL ?? r.installing?.scriptURL),
+      ),
     ).toEqual([origin + '/ticketsv-offline-worker.js'])
     expect(await page.evaluate(() => ['wallet', 'WalletClient', 'bsv', 'bsvWallet'].filter(key => key in window))).toEqual([])
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)

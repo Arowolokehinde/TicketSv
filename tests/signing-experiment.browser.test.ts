@@ -5,20 +5,36 @@ import { prepareSigning } from '../src/wallet/signing-experiment.ts'
 test('preserves a failed transfer error for download without retrying or signing', async ({ page }) => {
   const wallet = syntheticSigningWallet()
   const prepared = await prepareSigning(wallet, 'error-run')
-  Object.assign(wallet, { listOutputs: async () => ({ totalOutputs: 1, outputs: [{ outpoint: `${prepared.source.txid}.${prepared.source.outputIndex}`, spendable: true, satoshis: 1 }] }) })
+  Object.assign(wallet, {
+    listOutputs: async () => ({
+      totalOutputs: 1,
+      outputs: [{ outpoint: `${prepared.source.txid}.${prepared.source.outputIndex}`, spendable: true, satoshis: 1 }],
+    }),
+  })
   const calls: string[] = []
   await page.route('http://localhost:3321/**', async route => {
     const method = new URL(route.request().url()).pathname.slice(1) as keyof typeof wallet
     calls.push(method)
     if (method === 'createAction') {
-      await route.fulfill({ status: 400, json: { isError: true, code: 1, name: 'WERR_INTERNAL', message: 'Service unavailable <b>offline</b>', stack: 'private-stack-marker' } })
+      await route.fulfill({
+        status: 400,
+        json: {
+          isError: true,
+          code: 1,
+          name: 'WERR_INTERNAL',
+          message: 'Service unavailable <b>offline</b>',
+          stack: 'private-stack-marker',
+        },
+      })
       return
     }
     const operation = wallet[method] as (args: unknown) => Promise<unknown>
     await route.fulfill({ json: await operation(route.request().postDataJSON()) })
   })
   await page.goto('/dev/feasibility')
-  await page.getByLabel('Load saved preparation').setInputFiles({ name: 'preparation.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(prepared)) })
+  await page
+    .getByLabel('Load saved preparation')
+    .setInputFiles({ name: 'preparation.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(prepared)) })
   await expect(page.getByRole('button', { name: 'Download preparation' })).toBeVisible()
   await page.getByLabel('I have saved the preparation and isolated external networking for the app and wallet.').check()
   await page.getByRole('button', { name: 'Attempt transfer signing', exact: true }).click()
@@ -34,7 +50,11 @@ test('preserves a failed transfer error for download without retrying or signing
   for await (const chunk of stream!) chunks.push(chunk)
   const text = Buffer.concat(chunks).toString('utf8')
   const report = JSON.parse(text)
-  expect(report.failure).toMatchObject({ phase: 'transfer', method: 'createAction', walletResponse: { status: 400, code: 1, message: 'Service unavailable <b>offline</b>' } })
+  expect(report.failure).toMatchObject({
+    phase: 'transfer',
+    method: 'createAction',
+    walletResponse: { status: 400, code: 1, message: 'Service unavailable <b>offline</b>' },
+  })
   expect(text).not.toContain('private-stack-marker')
   expect(report).not.toHaveProperty('preparation')
   await expect(page.getByRole('button', { name: 'Attempt transfer signing', exact: true })).toBeDisabled()
@@ -46,7 +66,12 @@ test('preserves a failed transfer error for download without retrying or signing
 test('loads saved preparation without another transaction and requires fresh offline acknowledgement', async ({ page }) => {
   const wallet = syntheticSigningWallet()
   const prepared = await prepareSigning(wallet, 'saved-run')
-  Object.assign(wallet, { listOutputs: async () => ({ totalOutputs: 1, outputs: [{ outpoint: `${prepared.source.txid}.${prepared.source.outputIndex}`, spendable: true, satoshis: 1 }] }) })
+  Object.assign(wallet, {
+    listOutputs: async () => ({
+      totalOutputs: 1,
+      outputs: [{ outpoint: `${prepared.source.txid}.${prepared.source.outputIndex}`, spendable: true, satoshis: 1 }],
+    }),
+  })
   const calls: string[] = []
   await page.route('http://localhost:3321/**', async route => {
     const method = new URL(route.request().url()).pathname.slice(1) as keyof typeof wallet
@@ -55,7 +80,9 @@ test('loads saved preparation without another transaction and requires fresh off
     await route.fulfill({ json: await operation(route.request().postDataJSON()), headers: { 'access-control-allow-origin': '*' } })
   })
   await page.goto('/dev/feasibility')
-  await page.getByLabel('Load saved preparation').setInputFiles({ name: 'preparation.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(prepared)) })
+  await page
+    .getByLabel('Load saved preparation')
+    .setInputFiles({ name: 'preparation.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(prepared)) })
   await expect(page.getByRole('button', { name: 'Download preparation' })).toBeVisible()
   expect(calls).not.toContain('createAction')
   expect(calls).not.toContain('createSignature')
@@ -119,7 +146,9 @@ test('stalled initial wallet check stops the attempt and prevents automatic retr
   await page.clock.install()
   let count = 0
   let release!: () => void
-  const held = new Promise<void>(resolve => { release = resolve })
+  const held = new Promise<void>(resolve => {
+    release = resolve
+  })
   await page.route('http://localhost:3321/**', async route => {
     count++
     await held
@@ -134,7 +163,9 @@ test('stalled initial wallet check stops the attempt and prevents automatic retr
     await expect(page.locator('.signing-panel [role="alert"]')).toContainText('timed out')
     await expect(page.getByRole('button', { name: 'Prepare signing fixture', exact: true })).toBeDisabled()
     expect(count).toBe(1)
-  } finally { release() }
+  } finally {
+    release()
+  }
 })
 
 for (const stalledMethod of ['createAction', 'signAction'] as const) {
@@ -144,13 +175,18 @@ for (const stalledMethod of ['createAction', 'signAction'] as const) {
     const calls: string[] = []
     let stalled = false
     let release!: () => void
-    const held = new Promise<void>(resolve => { release = resolve })
+    const held = new Promise<void>(resolve => {
+      release = resolve
+    })
     await page.route('http://localhost:3321/**', async route => {
       const method = new URL(route.request().url()).pathname.slice(1) as keyof typeof wallet
       calls.push(method)
       const operation = wallet[method] as (args: unknown) => Promise<unknown>
       const result = await operation(route.request().postDataJSON())
-      if (method === stalledMethod) { stalled = true; await held }
+      if (method === stalledMethod) {
+        stalled = true
+        await held
+      }
       await route.fulfill({ json: result, headers: { 'access-control-allow-origin': '*' } })
     })
     await page.goto('/dev/feasibility')
@@ -171,7 +207,9 @@ for (const stalledMethod of ['createAction', 'signAction'] as const) {
         await page.getByText('Wallet action references', { exact: true }).click()
         await expect(page.locator('.signing-panel')).toContainText('dGVzdA==')
       }
-    } finally { release() }
+    } finally {
+      release()
+    }
     await page.waitForTimeout(100)
     expect(calls.filter(method => method === 'createAction')).toHaveLength(stalledMethod === 'createAction' ? 1 : 2)
     expect(calls.filter(method => method === 'signAction')).toHaveLength(stalledMethod === 'createAction' ? 0 : 1)

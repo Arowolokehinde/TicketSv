@@ -262,9 +262,13 @@ it('an unknown attempt keeps a short reason; a pending one cannot carry one', as
     { result } = await signWith(f, actionWallet(f, 'exact', 'other-txid').wallet)
   const base = { id: 'a1', startedAt: new Date().toISOString() }
   const sender = (signAttempt: object) => ({ ...result, signAttempt })
-  expect(readSender(sender({ ...base, outcome: 'unknown', finishedAt: base.startedAt, reason: 'x'.repeat(600) })).signAttempt?.reason).toHaveLength(300)
+  expect(
+    readSender(sender({ ...base, outcome: 'unknown', finishedAt: base.startedAt, reason: 'x'.repeat(600) })).signAttempt?.reason,
+  ).toHaveLength(300)
   expect(() => readSender(sender({ ...base, outcome: 'pending', reason: 'no' }))).toThrow('Invalid handoff attempt.')
-  expect(() => readSender(sender({ ...base, outcome: 'unknown', finishedAt: base.startedAt, reason: 7 }))).toThrow('Invalid handoff attempt.')
+  expect(() => readSender(sender({ ...base, outcome: 'unknown', finishedAt: base.startedAt, reason: 7 }))).toThrow(
+    'Invalid handoff attempt.',
+  )
 })
 it('identity change after createAction aborts before signing', async () => {
   const f = await fundedForSigning(),

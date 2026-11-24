@@ -21,7 +21,10 @@ export function FeasibilityScreen(): React.JSX.Element {
         <div className="development-status" aria-label="Current integration status">
           <span data-network={BSV_NETWORK}>Testnet</span>
         </div>
-        <p className="boundary">Wallet access starts only through the explicit controls below. Product ticket actions remain unavailable. Sample tickets do not establish that the integrations work.</p>
+        <p className="boundary">
+          Wallet access starts only through the explicit controls below. Product ticket actions remain unavailable. Sample tickets do not
+          establish that the integrations work.
+        </p>
         <WalletConnectionPanel />
         <SigningExperimentPanel />
         <SpvExperimentPanel />
@@ -31,18 +34,29 @@ export function FeasibilityScreen(): React.JSX.Element {
         <WalletImportReviewPanel />
         <WalletImportPanel />
         <ConflictExperimentPanel />
-        <p><a href="/dev/reopening">Open offline reopening experiment ↗</a></p>
+        <p>
+          <a href="/dev/reopening">Open offline reopening experiment ↗</a>
+        </p>
         <ol className="gate-list">
           {feasibilityGates.map((gate, index) => (
             <li key={gate.id}>
-              <span className="gate-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+              <span className="gate-index" aria-hidden="true">
+                {String(index + 1).padStart(2, '0')}
+              </span>
               <span className="gate-label">{gate.label}</span>
-              <span className="gate-status" data-status={gate.status}>Not tested</span>
+              <span className="gate-status" data-status={gate.status}>
+                Not tested
+              </span>
             </li>
           ))}
         </ol>
-        <p className="boundary">A connection observation alone does not close a compatibility gate. Record actual wallet versions, supported devices and reproducible results separately. No offline readiness or successful verification is claimed here.</p>
-        <a className="preview-link" href="/">Open the TicketSV website ↗</a>
+        <p className="boundary">
+          A connection observation alone does not close a compatibility gate. Record actual wallet versions, supported devices and
+          reproducible results separately. No offline readiness or successful verification is claimed here.
+        </p>
+        <a className="preview-link" href="/">
+          Open the TicketSV website ↗
+        </a>
       </section>
     </main>
   )

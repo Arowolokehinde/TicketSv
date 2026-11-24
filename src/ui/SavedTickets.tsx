@@ -455,14 +455,16 @@ export function SavedTickets() {
             <button className="btn primary" aria-label="Verify locally" disabled={busy} onClick={verify}>
               Verify locally
             </button>
-            {report?.verdict === 'verified' && report.presentedTransferMined && held.includes(status(fromAttendee(selected.evidence), false)) && (
-              <TicketQR
-                key={selected.id + selected.evidence.pkg.atomicBeefBase64}
-                pkg={selected.evidence.pkg}
-                eventName={selected.evidence.event.name}
-                busy={busy}
-              />
-            )}
+            {report?.verdict === 'verified' &&
+              report.presentedTransferMined &&
+              held.includes(status(fromAttendee(selected.evidence), false)) && (
+                <TicketQR
+                  key={selected.id + selected.evidence.pkg.atomicBeefBase64}
+                  pkg={selected.evidence.pkg}
+                  eventName={selected.evidence.event.name}
+                  busy={busy}
+                />
+              )}
             {report && (
               <div className="issuance-report" aria-live="polite">
                 <h3>Saved ticket verification: {report.verdict}</h3>

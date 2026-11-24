@@ -57,7 +57,10 @@ it('presents request status and actions clearly on desktop and phone while keepi
       }))
       await context.route('**/api/tickets', r => r.fulfill({ json: { tickets: [f.record], nextOffset: null } }))
       await context.route('**/api/tickets/requests', r => r.fulfill({ json: { requests, nextOffset: null } }))
-      await context.route(url => url.pathname === `/api/tickets/${f.record.id}`, r => r.fulfill({ json: f.record }))
+      await context.route(
+        url => url.pathname === `/api/tickets/${f.record.id}`,
+        r => r.fulfill({ json: f.record }),
+      )
       await context.route(/localhost:(3321|2121)/, r => {
         walletCalls++
         return r.abort()

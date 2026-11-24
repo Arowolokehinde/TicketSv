@@ -15,7 +15,12 @@ describe('noSend signing experiment', () => {
   it('restores saved preparation without creating a transaction or signature', async () => {
     const { wallet } = setup()
     const source = await prepareSigning(wallet, 'test-run')
-    Object.assign(wallet, { listOutputs: vi.fn(async () => ({ totalOutputs: 1, outputs: [{ outpoint: `${source.source.txid}.${source.source.outputIndex}`, spendable: true }] })) })
+    Object.assign(wallet, {
+      listOutputs: vi.fn(async () => ({
+        totalOutputs: 1,
+        outputs: [{ outpoint: `${source.source.txid}.${source.source.outputIndex}`, spendable: true }],
+      })),
+    })
     vi.mocked(wallet.createSignature).mockClear()
     vi.mocked(wallet.createAction).mockClear()
     expect(await restorePreparation(wallet, JSON.stringify(source))).toEqual(source)
@@ -64,7 +69,9 @@ describe('noSend signing experiment', () => {
       }
       expect(wallet.signAction).toHaveBeenCalledWith(expect.objectContaining({ options: { noSend: true, returnTXIDOnly: false } }))
       expect(fetch).not.toHaveBeenCalled()
-    } finally { fetch.mockRestore() }
+    } finally {
+      fetch.mockRestore()
+    }
   })
 
   it('rejects mainnet before key or transaction requests', async () => {
@@ -141,6 +148,8 @@ describe('noSend signing experiment', () => {
     const beef = Beef.fromBinary(source.source.atomicBeef)
     beef.version = 0xefbe0002 // BEEF V2 supports explicit txid-only entries.
     beef.makeTxidOnly(beef.txs[0]!.txid)
-    await expect(inspectFinal({ tx: beef.toBinaryAtomic(source.source.txid), txid: source.source.txid }, source.sourceScript)).rejects.toThrow('Incomplete Atomic BEEF: full dependencies are required.')
+    await expect(
+      inspectFinal({ tx: beef.toBinaryAtomic(source.source.txid), txid: source.source.txid }, source.sourceScript),
+    ).rejects.toThrow('Incomplete Atomic BEEF: full dependencies are required.')
   })
 })

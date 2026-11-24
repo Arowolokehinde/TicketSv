@@ -72,7 +72,8 @@ function memory(record: SenderRecord): RecordStore<SenderRecord> {
   let saved = readSender(record)
   return {
     load: async id => (id === saved.id ? structuredClone(saved) : undefined),
-    list: async () => [structuredClone(saved)],remove: async () => {},
+    list: async () => [structuredClone(saved)],
+    remove: async () => {},
     save: async (next, expected) => {
       if (saved.revision !== expected) throw Error('Revision conflict')
       saved = readSender(next, saved)

@@ -3,7 +3,14 @@ import type { RelinquishOutputArgs, WalletInterface } from '@bsv/sdk'
 import { handoffFixture } from './helpers/handoff-fixture.ts'
 import { memory, releaseSnapshot, senderReleaseFixture, walletFor } from './helpers/sender-release-fixture.ts'
 import { newSettlement } from '../src/handoff/settlement.ts'
-import { checkSpentOutputs, readSenderRelease, recheckRelease, releaseEligibility, releaseSpentOutputs, type SenderRelease } from '../src/handoff/release.ts'
+import {
+  checkSpentOutputs,
+  readSenderRelease,
+  recheckRelease,
+  releaseEligibility,
+  releaseSpentOutputs,
+  type SenderRelease,
+} from '../src/handoff/release.ts'
 
 // Only the synthetic header boundary is replaced; signatures, BEEF and script verification remain real.
 vi.mock('../src/headers/tracker.ts', async original => ({

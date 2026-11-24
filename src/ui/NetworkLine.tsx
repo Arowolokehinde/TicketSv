@@ -15,7 +15,9 @@ export const outcomeText = (r: Pick<NetworkRequest, 'outcome' | 'status'>): stri
           ? 'cancelled'
           : 'failed'
 // For downloaded reports: the measured counts, or 'not measured'. Never an assumed zero.
-export function networkReport(w: NetworkWindow | undefined): { requests: number; otherBrowserLoads: number | 'not measured' } | 'not measured' {
+export function networkReport(
+  w: NetworkWindow | undefined,
+): { requests: number; otherBrowserLoads: number | 'not measured' } | 'not measured' {
   if (!w?.measured) return 'not measured'
   return { requests: w.requestCount, otherBrowserLoads: w.otherLoads ?? 'not measured' }
 }

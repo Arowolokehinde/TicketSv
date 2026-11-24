@@ -269,16 +269,14 @@ export function createApp({
     if (res.headersSent) return
     const status =
       error instanceof ApiError ? error.status : error.type === 'entity.too.large' ? 413 : error.type === 'entity.parse.failed' ? 400 : 500
-    res
-      .status(status)
-      .json({
-        error:
-          error instanceof ApiError
-            ? error.message
-            : status === 500
-              ? 'The server could not complete this request. Please try again.'
-              : 'Invalid or oversized request.',
-      })
+    res.status(status).json({
+      error:
+        error instanceof ApiError
+          ? error.message
+          : status === 500
+            ? 'The server could not complete this request. Please try again.'
+            : 'Invalid or oversized request.',
+    })
   }
   app.use(errors)
   return app

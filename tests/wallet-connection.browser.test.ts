@@ -6,7 +6,14 @@ async function desktop(page: Page, network = 'testnet') {
   await page.route('http://localhost:3321/**', async route => {
     const method = new URL(route.request().url()).pathname.slice(1)
     calls.push(method)
-    const body = method === 'getNetwork' ? { network } : method === 'getVersion' ? { version: 'test-v1.0.0' } : method === 'getPublicKey' ? { publicKey: identityKey } : { unexpected: true }
+    const body =
+      method === 'getNetwork'
+        ? { network }
+        : method === 'getVersion'
+          ? { version: 'test-v1.0.0' }
+          : method === 'getPublicKey'
+            ? { publicKey: identityKey }
+            : { unexpected: true }
     await route.fulfill({ json: body, headers: { 'access-control-allow-origin': '*' } })
   })
   return calls
@@ -68,7 +75,11 @@ test('cancelled native response cannot complete an old attempt', async ({ page }
   await expect(page.getByRole('alert')).toContainText('cancelled')
   await page.evaluate(() => {
     const request = JSON.parse((window as unknown as { testMessages: string[] }).testMessages[0]!)
-    window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({ type: 'CWI', isInvocation: false, id: request.id, status: 'success', result: { network: 'testnet' } }) }))
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: JSON.stringify({ type: 'CWI', isInvocation: false, id: request.id, status: 'success', result: { network: 'testnet' } }),
+      }),
+    )
   })
   await page.waitForTimeout(100)
   expect(await page.evaluate('window.testMessages.length')).toBe(1)
@@ -93,7 +104,9 @@ for (const action of ['cancel', 'timeout'] as const) {
     await page.clock.install()
     const calls = await desktop(page)
     let release!: () => void
-    const held = new Promise<void>(resolve => { release = resolve })
+    const held = new Promise<void>(resolve => {
+      release = resolve
+    })
     let requested = false
     await page.route('**/assets/wallet-*.js', async route => {
       requested = true
@@ -109,7 +122,9 @@ for (const action of ['cancel', 'timeout'] as const) {
       await expect(page.getByRole('alert')).toContainText(action === 'cancel' ? 'cancelled' : 'within 30 seconds')
       await expect(page.getByRole('button', { name: 'Connect wallet', exact: true })).toBeEnabled()
       expect(calls).toEqual([])
-    } finally { release() }
+    } finally {
+      release()
+    }
     // A retry shares the previously stalled import; only the new attempt may call the wallet.
     await page.getByRole('button', { name: 'Connect wallet', exact: true }).click()
     await expect(page.getByTestId('wallet-identity')).toBeVisible()

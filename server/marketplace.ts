@@ -80,7 +80,9 @@ export function marketplaceRoutes(app: Express, pool: Pool, now: () => number) {
         throw new ApiError(400, 'Choose a valid timezone, such as UTC, Europe/Madrid or America/New_York, then publish again.')
       }
       await db.query(
-        'INSERT INTO event_publications(event_id,owner_key,revision,details,published,requests_close_at) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT(event_id) DO UPDATE SET revision=EXCLUDED.revision,details=EXCLUDED.details,published=EXCLUDED.published,requests_close_at=EXCLUDED.requests_close_at,published_at=now()',
+        'INSERT INTO event_publications(event_id,owner_key,revision,details,published,requests_close_at) VALUES ($1,$2,$3,$4,$5,$6) ' +
+          'ON CONFLICT(event_id) DO UPDATE SET revision=EXCLUDED.revision,details=EXCLUDED.details,published=EXCLUDED.published,' +
+          'requests_close_at=EXCLUDED.requests_close_at,published_at=now()',
         [event.id, res.locals.owner, event.revision, event.details, req.body.published, closeAt],
       )
       await db.query('COMMIT')
@@ -189,7 +191,9 @@ export function marketplaceRoutes(app: Express, pool: Pool, now: () => number) {
     const offset = offsetOf(req.query.offset)
     const rows = (
       await pool.query(
-        "SELECT i.id,i.event_id,i.owner_key,i.event_revision,i.event_details,i.request,i.status,i.txid,i.created_at,i.updated_at FROM venue_issuances i JOIN attendee_requests r ON r.id=i.attendee_request_id WHERE r.attendee_key=$1 AND i.status='complete' ORDER BY i.created_at DESC,i.id LIMIT 26 OFFSET $2",
+        'SELECT i.id,i.event_id,i.owner_key,i.event_revision,i.event_details,i.request,i.status,i.txid,i.created_at,i.updated_at ' +
+          'FROM venue_issuances i JOIN attendee_requests r ON r.id=i.attendee_request_id ' +
+          "WHERE r.attendee_key=$1 AND i.status='complete' ORDER BY i.created_at DESC,i.id LIMIT 26 OFFSET $2",
         [res.locals.owner, offset],
       )
     ).rows

@@ -105,7 +105,11 @@ describe('real handoff settlement', () => {
     expect(evidenceSize(result.settlement.ticket.pkg)).toMatchObject({ transactions: 1, proofs: 1 })
   })
   it('never records an already-mined ticket as its size before mining', async () => {
-    const mined = readSettlement({ ...observed(minedProof().toHex()), ticket: realTicket('mined'), id: newSettlement(realTicket('mined')).id }),
+    const mined = readSettlement({
+        ...observed(minedProof().toHex()),
+        ticket: realTicket('mined'),
+        id: newSettlement(realTicket('mined')).id,
+      }),
       store = memory(readSettlement, mined)
     const result = await prepareObservedHandoffMining(mined, signal(), undefined, store, async () => realSnapshot())
     expect(result.verification).toMatchObject({ verdict: 'verified' })

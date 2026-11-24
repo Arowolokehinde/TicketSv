@@ -37,9 +37,13 @@ describe('settlement evidence before mining', () => {
     const saved = readSettlement({ ...first, revision: 1, unminedEvidence: size }, first)
     expect(saved.unminedEvidence).toEqual(size)
     expect(readSettlement({ ...saved, revision: 2 }, saved).unminedEvidence).toEqual(size)
-    expect(() => readSettlement({ ...saved, revision: 2, unminedEvidence: { ...size, bytes: 1 } }, saved)).toThrow('Signed transfer changed.')
+    expect(() => readSettlement({ ...saved, revision: 2, unminedEvidence: { ...size, bytes: 1 } }, saved)).toThrow(
+      'Signed transfer changed.',
+    )
   })
   it('rejects invalid sizes', () => {
-    expect(() => readSettlement({ ...first, unminedEvidence: { bytes: -1, transactions: 1, proofs: 0 } })).toThrow('Invalid saved evidence size.')
+    expect(() => readSettlement({ ...first, unminedEvidence: { bytes: -1, transactions: 1, proofs: 0 } })).toThrow(
+      'Invalid saved evidence size.',
+    )
   })
 })

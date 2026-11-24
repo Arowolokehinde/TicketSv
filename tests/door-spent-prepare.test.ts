@@ -30,7 +30,7 @@ describe('spent list preparation', () => {
       { status: 'pending', pkg: null },
     ]
     const list = await prepareSpentList('conflict-event', signal(), undefined, {
-      api: async <T,>(path: string) => {
+      api: async <T>(path: string) => {
         expect(path).toBe('/api/events/conflict-event/issuances')
         return { issuances } as T
       },
@@ -47,7 +47,7 @@ describe('spent list preparation', () => {
   it('replaces an earlier list for the event', async () => {
     const store = memory({ id: 'conflict-event', revision: 3, checkedAt: walked.checkedAt, tickets: [], spent: [] })
     const list = await prepareSpentList('conflict-event', signal(), undefined, {
-      api: async <T,>() => ({ issuances: [] }) as T,
+      api: async <T>() => ({ issuances: [] }) as T,
       store,
       walk: async () => walked,
     })
@@ -70,7 +70,7 @@ describe('spent list preparation', () => {
       store = memory(earlier)
     await expect(
       prepareSpentList('conflict-event', signal(), undefined, {
-        api: async <T,>() => ({ issuances: [] }) as T,
+        api: async <T>() => ({ issuances: [] }) as T,
         store,
         walk: async () => {
           throw Error('Spend check failed (HTTP 500).')

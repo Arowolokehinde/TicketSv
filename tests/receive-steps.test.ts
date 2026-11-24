@@ -72,7 +72,10 @@ describe('receive next step', () => {
       done: 'Request shown to the sender',
       next: 'Ask the sender to open Send and tap Show ticket QR, then Show to scanner. Then tap Scan ticket QR.',
     })
-    expect(next({ ...reviewed, request: true, ticket: true })).toEqual({ done: 'Ticket received from the sender', next: 'Select Verify locally.' })
+    expect(next({ ...reviewed, request: true, ticket: true })).toEqual({
+      done: 'Ticket received from the sender',
+      next: 'Select Verify locally.',
+    })
   })
   it('follows the verification result', () => {
     const received = { ...reviewed, request: true, ticket: true }

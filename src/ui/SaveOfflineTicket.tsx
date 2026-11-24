@@ -85,14 +85,12 @@ export function SaveOfflineTicket({ record, owner, busy, perform, onProgress, on
           </ul>
           {app === 'ready' && (
             <p>
-              Open Offline tickets, then press ⌘D on Mac or Ctrl+D on Windows/Linux to bookmark that page. Disconnect external internet, close
-              that tab, then reopen the same address in this browser profile and verify locally.
+              Open Offline tickets, then press ⌘D on Mac or Ctrl+D on Windows/Linux to bookmark that page. Disconnect external internet,
+              close that tab, then reopen the same address in this browser profile and verify locally.
             </p>
           )}
           {app === 'waiting' && (
-            <p>
-              A TicketSV update is saved. Select Reload in the update notice, then save again to confirm it before disconnecting.
-            </p>
+            <p>A TicketSV update is saved. Select Reload in the update notice, then save again to confirm it before disconnecting.</p>
           )}
           {saved && !app && !stage && (
             <p>Your ticket copy is saved, but offline app preparation is not confirmed. Stay online and try saving again.</p>

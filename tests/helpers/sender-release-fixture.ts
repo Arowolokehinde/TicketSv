@@ -30,7 +30,8 @@ export function memory<T extends { id: string; revision: number }>(
   if (initial) rows.set(initial.id, validator(initial))
   return {
     load: async id => structuredClone(rows.get(id)),
-    list: async () => [...rows.values()].map(r => structuredClone(r)),remove: async () => {},
+    list: async () => [...rows.values()].map(r => structuredClone(r)),
+    remove: async () => {},
     value: id => rows.get(id),
     save: async (next, expected) => {
       const old = rows.get(next.id)

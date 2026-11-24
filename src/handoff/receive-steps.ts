@@ -52,10 +52,20 @@ export function receiveSteps(f: ReceiveFacts): { items: ReceiveStep[]; current: 
     f.shown || f.ticket
       ? { key: 'shown', label: 'Request shown to the sender', state: 'done', detail: 'The sender has your request.' }
       : f.request
-        ? { key: 'shown', label: 'Request shown to the sender', state: 'waiting', detail: 'Show your request to the sender, by QR or file.' }
+        ? {
+            key: 'shown',
+            label: 'Request shown to the sender',
+            state: 'waiting',
+            detail: 'Show your request to the sender, by QR or file.',
+          }
         : { key: 'shown', label: 'Request shown to the sender', state: 'todo', detail: 'After your request is created.' },
     f.ticket
-      ? { key: 'ticket', label: 'Ticket received from the sender', state: 'done', detail: "The sender's signed ticket is saved on this phone." }
+      ? {
+          key: 'ticket',
+          label: 'Ticket received from the sender',
+          state: 'done',
+          detail: "The sender's signed ticket is saved on this phone.",
+        }
       : f.request && f.shown
         ? {
             key: 'ticket',
@@ -65,7 +75,12 @@ export function receiveSteps(f: ReceiveFacts): { items: ReceiveStep[]; current: 
           }
         : { key: 'ticket', label: 'Ticket received from the sender', state: 'todo', detail: 'After the sender has your request.' },
     f.confirmed || f.verdict === 'verified'
-      ? { key: 'verified', label: 'Ticket verified on this phone', state: 'done', detail: 'Checked on this phone, with no internet needed.' }
+      ? {
+          key: 'verified',
+          label: 'Ticket verified on this phone',
+          state: 'done',
+          detail: 'Checked on this phone, with no internet needed.',
+        }
       : {
           key: 'verified',
           label: 'Ticket verified on this phone',

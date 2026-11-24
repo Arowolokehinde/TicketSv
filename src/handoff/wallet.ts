@@ -216,7 +216,12 @@ async function finish(
     if (current[field]!.outcome !== 'pending') return current
     const merged = { ...patch, ...(patch.funding ? { funding: { ...current.funding, ...patch.funding } } : {}) }
     try {
-      const ended = { ...current[field], outcome, finishedAt: new Date().toISOString(), ...(reason ? { reason: reason.slice(0, 300) } : {}) }
+      const ended = {
+        ...current[field],
+        outcome,
+        finishedAt: new Date().toISOString(),
+        ...(reason ? { reason: reason.slice(0, 300) } : {}),
+      }
       return await write(store, current, { ...merged, [field]: ended })
     } catch (error) {
       const latest = await store.load(id)
