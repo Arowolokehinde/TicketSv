@@ -103,14 +103,14 @@ The build includes TypeScript checks. Test suites:
 
 ## Hosted deployment notes
 
-- **Migrate before deploying.** The hosted API refuses to serve until migration 009 exists. Run `npm run db:migrate` against the hosted database, then deploy. Migration 009 stores each publication's request closing time, which is computed in Node from the event's local date and timezone. Listings compare timestamps and never ask PostgreSQL to read timezone names. Publications whose closing time cannot be computed count as closed.
-- **Login rate limit.** On Vercel, the API trusts exactly one proxy hop, so each client IP that Vercel writes gets its own in-process count. For a limit shared across function instances, add one Vercel Firewall rule (available on Hobby):
+- **Migrate before deploying.** The hosted API refuses to serve until migration 010 exists. Run `npm run db:migrate` against the hosted database, then deploy. Migration 010 makes ticket IDs unique per organiser (see **Ticket IDs** below). Migration 009 stores each publication's request closing time, which is computed in Node from the event's local date and timezone. Listings compare timestamps and never ask PostgreSQL to read timezone names. Publications whose closing time cannot be computed count as closed.
+- **Login rate limit.** On Vercel, the API trusts exactly one proxy hop, so each client IP that Vercel writes gets its own in-process count. The limit shared across function instances is the Vercel Firewall rule **TicketSV login rate limit**, active on the production project (checked 24 November 2026). A new deployment needs the same rule:
   - **Condition:** path matches `^/(api/auth/(challenge|login|logout|scanner-permit)|\.well-known/auth)$`
   - **Action:** rate limit, keyed by IP, fixed window of 60 seconds, 120 requests, responding with 429.
 
   Vercel counts each edge region separately.
 - **Shared header ranges.** Complete header batches below the saved tip are immutable, so `/api/headers/range` marks them cacheable at Vercel's CDN for a week. The batch at the tip is never cached. Each range request reads only its slice of the saved history.
-- **Known limitation: ticket ID existence.** Ticket IDs are random UUIDs and unique across all organisers. A signed-in organiser who submits another organiser's ticket ID receives a conflict, which reveals that the ID exists, but nothing about its event, owner or holder. Removing this would require scoping ticket IDs per organiser in the database.
+- **Ticket IDs.** Ticket IDs are random UUIDs, unique within each organiser's tickets rather than across all organisers. Creating a ticket checks only the organiser's own tickets, so it never reveals whether another organiser uses an ID. An attendee's ticket is fetched with its event ID, which tells apart two organisers' tickets that share an ID.
 
 ## Naming
 
@@ -182,7 +182,7 @@ On the device that signed the transfer, open **Confirm** for that transfer. Veri
 
 Release only removes outputs from the wallet's lists. The wallet history will not show the transfer as an outgoing spend. Release does not prevent a dishonest sender from signing a second, conflicting transfer before the first is mined.
 
-Wallet support, from source inspection only; live testing is pending:
+Release worked live on 18 November 2026 with BSV Desktop: both spent outputs of a mined transfer were removed (Test 2 of the live test guide). Wallet support beyond that, from source inspection:
 
 | Wallet | `relinquishOutput` |
 | --- | --- |

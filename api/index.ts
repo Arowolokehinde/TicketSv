@@ -16,7 +16,7 @@ function initialize(){
   handlePoolErrors(pool)
   attachDatabasePool(pool)
   try{
-   if(!(await pool.query('SELECT 1 FROM ticketsv_migrations WHERE version=9')).rowCount)throw Error('Apply TicketSV migration 009 before deployment')
+   if(!(await pool.query('SELECT 1 FROM ticketsv_migrations WHERE version=10')).rowCount)throw Error('Apply TicketSV migration 010 before deployment')
    // Vercel overwrites x-forwarded-for with the client IP and forwards no external
    // IPs, so exactly one trusted hop gives each client its own login limit.
    return createApp({pool,wallet:new ProtoWallet(config.key) as WalletInterface,origins:()=>config.origins,trustProxy:1,

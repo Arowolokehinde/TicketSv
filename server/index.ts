@@ -20,7 +20,7 @@ const pool = new Pool({ connectionString, max: 10, connectionTimeoutMillis: 5000
 handlePoolErrors(pool)
 if (process.argv.includes('--migrate')) { await migrate(pool); await pool.end(); console.log('TicketSV database migrations applied.') }
 else {
-  if(!(await pool.query('SELECT version FROM ticketsv_migrations WHERE version=9')).rowCount){await pool.end();throw Error('Run npm run db:migrate before starting the API: marketplace publication closing times need migration 009. Existing records are retained.')}
+  if(!(await pool.query('SELECT version FROM ticketsv_migrations WHERE version=10')).rowCount){await pool.end();throw Error('Run npm run db:migrate before starting the API: per-organiser ticket IDs need migration 010. Existing records are retained.')}
   const key = PrivateKey.fromHex(secret)
   if (key.toHex().padStart(64, '0') !== secret || key.isZero() || BigInt('0x' + secret) >= BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141')) throw new Error('Invalid server authentication key.')
   const app = createApp({ pool, wallet: new ProtoWallet(key) as WalletInterface, origins: () => origins, trustProxy: 'loopback' })

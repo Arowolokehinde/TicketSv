@@ -54,7 +54,7 @@ async function setup(page: Page, context: BrowserContext, f: Fixture) {
   auth.setSession({ identityKey: f.identity, network: 'testnet', expiresAt: new Date(Date.now() + 3600000).toISOString() })
   await context.route('**/api/tickets', r => r.fulfill({ json: { tickets: [f.record], nextOffset: null } }))
   await context.route('**/api/tickets/requests**', r => r.fulfill({ json: { requests: [], nextOffset: null } }))
-  await context.route(`**/api/tickets/${f.record.id}`, r => r.fulfill({ json: f.record }))
+  await context.route(url => url.pathname === `/api/tickets/${f.record.id}`, r => r.fulfill({ json: f.record }))
   await context.route(
     url => url.pathname === '/tickets',
     r => r.fulfill({ contentType: 'text/html', body: '<!doctype html><div id="test-root"></div>' }),

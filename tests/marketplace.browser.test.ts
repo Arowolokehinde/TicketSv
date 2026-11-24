@@ -228,7 +228,7 @@ test('checking mining prepares headers without wallet calls or a displayed verdi
   })
   await context.route('**/api/tickets', r => r.fulfill({ json: { tickets: [record], nextOffset: null } }))
   await context.route('**/api/tickets/requests**', r => r.fulfill({ json: { requests: [], nextOffset: null } }))
-  await context.route(`**/api/tickets/${record.id}`, r => r.fulfill({ json: record }))
+  await context.route(url => url.pathname === `/api/tickets/${record.id}`, r => r.fulfill({ json: record }))
   await context.route('**/api/tickets/header-preparation', r =>
     r.fulfill({ json: { network: 'testnet', checkpoint: CHECKPOINT, tip: 1762325, target: 1762325, state: 'ready' } }),
   )

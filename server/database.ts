@@ -45,6 +45,7 @@ export async function migrate(pool: Pool): Promise<void> {
       [7, '007-hosted-auth.sql'],
       [8, '008-received-tickets.sql'],
       [9, '009-publication-close.sql'],
+      [10, '010-issuance-owner-ids.sql'],
     ] as const) {
       const applied = await client.query('SELECT version FROM ticketsv_migrations WHERE version = $1', [version])
       if (!applied.rowCount) {

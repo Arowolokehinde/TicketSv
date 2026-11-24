@@ -76,12 +76,12 @@ export function issuanceRoutes(app: Express, pool: Pool) {
         request = readReceiveRequest(JSON.stringify(attendee.proof.request))
         eventRevision = attendee.event_revision
       }
-      const existing = await db.query('SELECT * FROM venue_issuances WHERE id=$1', [ticketId])
+      // Only this organiser's tickets: another organiser's ID looks unused.
+      const existing = await db.query('SELECT * FROM venue_issuances WHERE id=$1 AND owner_key=$2', [ticketId, res.locals.owner])
       if (existing.rowCount) {
         const row = existing.rows[0]
         if (
           (row.attendee_request_id ?? undefined) !== attendeeRequestId ||
-          row.owner_key !== res.locals.owner ||
           row.event_id !== event.id ||
           row.event_revision !== eventRevision ||
           JSON.stringify(readReceiveRequest(JSON.stringify(row.request))) !== JSON.stringify(request)

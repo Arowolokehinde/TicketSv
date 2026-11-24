@@ -46,7 +46,7 @@ it('reveals ticket presentation on Dashboard after mined verification without an
  try{
  await context.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<div id="root"></div>'}))
  const auth=await accountApi(context);auth.setSession({identityKey:f.identity,network:'testnet',expiresAt:new Date(Date.now()+3600000).toISOString()})
- await context.route('**/api/tickets',r=>r.fulfill({json:{tickets:[f.record],nextOffset:null}}));await context.route('**/api/tickets/requests',r=>r.fulfill({json:{requests:[],nextOffset:null}}));await context.route(`**/api/tickets/${f.record.id}`,r=>r.fulfill({json:f.record}))
+ await context.route('**/api/tickets',r=>r.fulfill({json:{tickets:[f.record],nextOffset:null}}));await context.route('**/api/tickets/requests',r=>r.fulfill({json:{requests:[],nextOffset:null}}));await context.route(url => url.pathname === `/api/tickets/${f.record.id}`, r=>r.fulfill({json:f.record}))
  await context.route('https://arcade-v2-testnet-us-1.bsvblockchain.tech/tx/**',r=>r.fulfill({json:{txid:f.record.txid,txStatus:'MINED',blockHeight:1762324,blockHash:'00'.repeat(32),merklePath:f.tx.merklePath!.toHex()}}))
  await context.route(/localhost:(3321|2121)/,r=>{walletCalls++;return r.abort()})
  await page.goto('http://127.0.0.1:4175/tickets');await page.addScriptTag({content:bundle});await page.evaluate(async snapshot=>{await window.TicketQRTest.saveSnapshot(snapshot);window.TicketQRTest.mount()},makeSnapshot([parseProviderHeader(header,'whatsonchain',header.height)]))

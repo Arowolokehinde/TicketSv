@@ -214,9 +214,9 @@ export function AttendeeDashboard() {
       }
     })
   }
-  function open(id: string) {
+  function open(id: string, eventId: string) {
     void perform(async (signal, check) => {
-      let record = await api<VenueIssuance>(`/api/tickets/${id}`, { signal })
+      let record = await api<VenueIssuance>(`/api/tickets/${id}?eventId=${eventId}`, { signal })
       check()
       const { verifyRequestProof } = await import('../marketplace/request-proof.ts')
       check()
@@ -460,7 +460,7 @@ export function AttendeeDashboard() {
                 </p>
               </div>
               <p className="dashboard-ticket-note">Delivered to your account. Open your ticket to check its latest evidence.</p>
-              <button className="btn dashboard-ticket-open" disabled={busy} onClick={() => open(ticket.id)}>
+              <button className="btn dashboard-ticket-open" disabled={busy} onClick={() => open(ticket.id, ticket.eventId)}>
                 View ticket <DashboardIcon name="arrow" />
               </button>
             </div>
@@ -696,7 +696,7 @@ export function AttendeeDashboard() {
                     className="btn dashboard-request-action"
                     aria-label="View ticket"
                     disabled={busy}
-                    onClick={() => open(request.ticketId!)}
+                    onClick={() => open(request.ticketId!, request.eventId)}
                   >
                     View ticket <DashboardIcon name="arrow" />
                   </button>

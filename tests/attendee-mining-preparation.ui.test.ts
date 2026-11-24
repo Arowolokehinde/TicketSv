@@ -67,7 +67,7 @@ it('prepares after mining detection and retains the mined envelope when header p
     initial.pkg!.atomicBeefBase64 = Utils.toBase64(f.tx.toAtomicBEEF())
     await context.route('**/api/tickets', route => route.fulfill({ json: { tickets: [initial], nextOffset: null } }))
     await context.route('**/api/tickets/requests', route => route.fulfill({ json: { requests: [], nextOffset: null } }))
-    await context.route(`**/api/tickets/${initial.id}`, route => route.fulfill({ json: initial }))
+    await context.route(url => url.pathname === `/api/tickets/${initial.id}`, route => route.fulfill({ json: initial }))
     await context.route('https://arcade-v2-testnet-us-1.bsvblockchain.tech/tx/**', route =>
       route.fulfill({
         json: { txid: initial.txid, txStatus: 'MINED', blockHeight: 1762324, blockHash: '00'.repeat(32), merklePath: proof },
@@ -124,7 +124,7 @@ it('reveals each next action only after success, retains retries, and resumes sa
       auth.setSession({ identityKey: f.identity, network: 'testnet', expiresAt: new Date(Date.now() + 3600000).toISOString() })
       await context.route('**/api/tickets', r => r.fulfill({ json: { tickets: [f.record], nextOffset: null } }))
       await context.route('**/api/tickets/requests', r => r.fulfill({ json: { requests: [], nextOffset: null } }))
-      await context.route(`**/api/tickets/${f.record.id}`, r => r.fulfill({ json: f.record }))
+      await context.route(url => url.pathname === `/api/tickets/${f.record.id}`, r => r.fulfill({ json: f.record }))
       await context.route('https://arcade-v2-testnet-us-1.bsvblockchain.tech/tx/**', r => {
         providerCalls++
         return r.fulfill({

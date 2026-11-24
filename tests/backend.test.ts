@@ -286,6 +286,37 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('signed authentication and Postg
     expect((await a.request(`${path}/${review.id}/reset`, {})).status).toBe(409)
   })
 
+  it("never reveals whether another organiser's ticket ID exists", async () => {
+    const a = client(new ProtoWallet(PrivateKey.fromRandom())),
+      b = client(new ProtoWallet(PrivateKey.fromRandom()))
+    await a.login()
+    await b.login()
+    const key = (await signer.getPublicKey({ identityKey: true })).publicKey
+    const reviewWith = (organiser: typeof a, eventId: string, ticketId: string) =>
+      organiser.request(`/api/events/${eventId}/issuances`, {
+        ticketId,
+        eventRevision: 1,
+        request: {
+          kind: 'ticket-request',
+          version: 1,
+          network: 'testnet',
+          requestId: `${ticketId}-source`,
+          recipient: { publicKey: key, protocolID: [2, 'counterfoil ticket receiving'], keyID: `${ticketId}-source`, counterparty: 'self' },
+        },
+      })
+    const eventA = await (await a.request('/api/events', { ...event, requestId: randomUUID() })).json()
+    const eventB = await (await b.request('/api/events', { ...event, requestId: randomUUID() })).json()
+    const taken = randomUUID()
+    expect((await reviewWith(a, eventA.id, taken)).status).toBe(201)
+    // B gets the same answer for A's ID as for an unused one.
+    const reused = await reviewWith(b, eventB.id, taken)
+    expect(reused.status).toBe(201)
+    expect((await reused.json()).eventId).toBe(eventB.id)
+    expect((await (await a.request(`/api/events/${eventA.id}/issuances/${taken}`)).json()).eventId).toBe(eventA.id)
+    expect((await (await b.request(`/api/events/${eventB.id}/issuances/${taken}`)).json()).eventId).toBe(eventB.id)
+    expect((await b.request(`/api/events/${eventA.id}/issuances/${taken}`)).status).toBe(404)
+  })
+
   it('saves authentic issuance evidence and permits idempotent evidence recovery without another execution', async () => {
     const c = client(new ProtoWallet(new PrivateKey(1)))
     await c.login()
@@ -420,6 +451,22 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('signed authentication and Postg
     expect(delivered.owner).toBe(venue)
     expect((await stranger.request(`/api/tickets/${ticketId}`)).status).toBe(404)
     expect((await (await stranger.request('/api/tickets')).json()).tickets).toEqual([])
+    // Another organiser may use the same ticket ID; the attendee still gets each event's own ticket.
+    const otherVenue = (await new ProtoWallet(new PrivateKey(74)).getPublicKey({ identityKey: true })).publicKey
+    const other = await (await stranger.request('/api/events', { ...event, requestId: randomUUID() })).json()
+    const otherRequest = randomUUID()
+    await pool.query(
+      'INSERT INTO attendee_requests(id,event_id,attendee_key,venue_key,event_revision,event_details,proof) VALUES ($1,$2,$3,$4,1,$5,$6)',
+      [otherRequest, other.id, buyer, otherVenue, event, proof],
+    )
+    await pool.query(
+      "INSERT INTO venue_issuances(id,event_id,owner_key,event_revision,event_details,request,status,txid,package,attendee_request_id) VALUES ($1,$2,$3,1,$4,$5,'complete',$6,$7,$8)",
+      [ticketId, other.id, otherVenue, event, proof.request, pkg.current.txid, pkg, otherRequest],
+    )
+    expect((await (await attendee.request(`/api/tickets/${ticketId}?eventId=${ev.id}`)).json()).owner).toBe(venue)
+    expect((await (await attendee.request(`/api/tickets/${ticketId}?eventId=${other.id}`)).json()).owner).toBe(otherVenue)
+    expect((await attendee.request(`/api/tickets/${ticketId}`)).status).toBe(404)
+    expect((await (await attendee.request('/api/tickets')).json()).tickets).toHaveLength(2)
   })
 
   it('stores publication closing times and never evaluates timezone names when listing', async () => {

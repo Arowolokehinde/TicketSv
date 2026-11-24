@@ -202,14 +202,17 @@ export function marketplaceRoutes(app: Express, pool: Pool, now: () => number) {
     })
   })
   app.get('/api/tickets/:id', async (req, res) => {
-    if (!validUUID(req.params.id)) throw new ApiError(404, 'Ticket not found.')
-    const row = (
+    const eventId = req.query.eventId
+    if (!validUUID(req.params.id) || (eventId !== undefined && !validUUID(eventId))) throw new ApiError(404, 'Ticket not found.')
+    // Ticket IDs are unique per organiser, so the event picks the ticket.
+    // Without it, an ID two organisers share matches nothing.
+    const rows = (
       await pool.query(
-        "SELECT i.*, r.proof AS attendee_proof FROM venue_issuances i JOIN attendee_requests r ON r.id=i.attendee_request_id WHERE i.id=$1 AND r.attendee_key=$2 AND i.status='complete'",
-        [req.params.id, res.locals.owner],
+        "SELECT i.*, r.proof AS attendee_proof FROM venue_issuances i JOIN attendee_requests r ON r.id=i.attendee_request_id WHERE i.id=$1 AND r.attendee_key=$2 AND ($3::uuid IS NULL OR i.event_id=$3) AND i.status='complete' LIMIT 2",
+        [req.params.id, res.locals.owner, eventId ?? null],
       )
-    ).rows[0]
-    if (!row) throw new ApiError(404, 'Ticket not found.')
-    res.json(issuanceRecord(row))
+    ).rows
+    if (rows.length !== 1) throw new ApiError(404, 'Ticket not found.')
+    res.json(issuanceRecord(rows[0]))
   })
 }
