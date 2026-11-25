@@ -18,8 +18,12 @@ it('rejects malformed binary and refuses lossy packing of extra or altered field
     pkg = f.record.pkg!
   expect(packCompactTicket({ ...pkg, extra: 'must not disappear' })).toBeNull()
   expect(packCompactTicket({ ...pkg, current: { ...pkg.current, index: 99 } })).toBeNull()
-  for (const bytes of [new Uint8Array(), new Uint8Array([159]), new Uint8Array([129, 99, 65])])
-    expect(() => unpackCompactTicket(bytes)).toThrow()
+  for (const [bytes, message] of [
+    [new Uint8Array(), 'Invalid compact package size.'],
+    [new Uint8Array([159]), 'Invalid compact length.'],
+    [new Uint8Array([129, 99, 65]), 'Truncated compact value.'],
+  ] as const)
+    expect(() => unpackCompactTicket(bytes)).toThrow(message)
 })
 
 it('retains later lineage and original issuance proofs when the origin is absent from current BEEF', async () => {

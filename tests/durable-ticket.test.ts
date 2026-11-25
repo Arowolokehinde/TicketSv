@@ -42,14 +42,19 @@ it('refreshes exact issuance evidence through reads while preserving attestation
   expect(result.current.txid).toBe(tx.id('hex'))
   expect(create).not.toHaveBeenCalled()
 })
-it.each(['missing', 'partial', 'wrong value', 'no proof'])('refuses unusable source evidence: %s', async mode => {
+it.each([
+  ['missing', 'Incomplete wallet output listing; review wallet state'],
+  ['partial', 'Incomplete wallet output listing; review wallet state'],
+  ['wrong value', 'Ticket is not available with full wallet evidence'],
+  ['no proof', 'Issuance mining proof is not available yet; check again after mining'],
+])('refuses unusable source evidence: %s', async (mode, message) => {
   const { wallet, identity, prep, tx } = await fixture()
   wallet.listOutputs = async () => ({
     totalOutputs: mode === 'partial' ? 1001 : 1,
     outputs: mode === 'missing' ? [] : [{ outpoint: `${tx.id('hex')}.0`, satoshis: mode === 'wrong value' ? 2 : 1, spendable: true }],
     BEEF: mode === 'no proof' ? Beef.fromBinary(Utils.toArray(prep.pkg.atomicBeefBase64, 'base64')).toBinary() : tx.toBEEF(),
   })
-  await expect(refreshIssuanceEvidence(wallet, prep.pkg, identity)).rejects.toThrow()
+  await expect(refreshIssuanceEvidence(wallet, prep.pkg, identity)).rejects.toThrow(message)
 })
 it('prepares a mined source without old noSendChange and requires the local verifier to confirm the subject', async () => {
   const { wallet, identity, prep } = await fixture(),

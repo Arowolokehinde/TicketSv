@@ -28,7 +28,14 @@ it('uses file fallback for incompressible packages and rejects malformed, damage
   const code = encodeStaticQR(JSON.stringify({ text: 'hello 🧡' }))!
   expect(decodeStaticQR(code)).toBe(JSON.stringify({ text: 'hello 🧡' }))
   expect(() => decodeStaticQR(code.slice(0, -4) + '0000')).toThrow('Static QR compression checksum does not match.')
-  for (const bad of ['TSV2:000', 'TSV1:A', 'TSV1:%%%', 'TSV1:ZZZ', 'TSV1:' + 'A'.repeat(3400)]) expect(() => decodeStaticQR(bad)).toThrow()
+  for (const [bad, message] of [
+    ['TSV2:000', 'Invalid or oversized static QR.'],
+    ['TSV1:A', 'Invalid static QR encoding.'],
+    ['TSV1:%%%', 'Invalid static QR encoding.'],
+    ['TSV1:ZZZ', 'Invalid static QR encoding.'],
+    ['TSV1:' + 'A'.repeat(3400), 'Invalid or oversized static QR.'],
+  ])
+    expect(() => decodeStaticQR(bad)).toThrow(message)
   expect(() => encodeStaticQR('not json')).toThrow('Unexpected token \'o\', "not json" is not valid JSON')
   expect(() => encodeStaticQR(JSON.stringify({ data: 'x'.repeat(4 * 1024 * 1024) }))).toThrow('Ticket envelope exceeds 4 MiB.')
 })

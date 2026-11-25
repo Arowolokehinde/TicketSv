@@ -60,14 +60,14 @@ it('rejects a different account, origin, ticket, event or recipient before savin
   const { record, identity } = await attendeeOfflineFixture()
   expect(() => attendeeEvidence(record, record.owner, origin)).toThrow('Receiving request context changed.')
   expect(() => attendeeEvidence(record, identity, 'https://elsewhere.test')).toThrow('Receiving request context changed.')
-  for (const patch of [
-    { id: crypto.randomUUID() },
-    { eventId: crypto.randomUUID() },
-    { eventRevision: 3 },
-    { txid: 'ab'.repeat(32) },
-    { request: { ...record.request, requestId: crypto.randomUUID() } },
-  ]) {
-    expect(() => attendeeEvidence({ ...record, ...patch }, identity, origin)).toThrow()
+  for (const [patch, message] of [
+    [{ id: crypto.randomUUID() }, 'Saved ticket does not match its original delivery.'],
+    [{ eventId: crypto.randomUUID() }, 'Receiving request context changed.'],
+    [{ eventRevision: 3 }, 'Receiving request context changed.'],
+    [{ txid: 'ab'.repeat(32) }, 'A completed attendee delivery is required.'],
+    [{ request: { ...record.request, requestId: crypto.randomUUID() } }, 'Invalid ticket package or receiving request'],
+  ] as const) {
+    expect(() => attendeeEvidence({ ...record, ...patch }, identity, origin)).toThrow(message)
   }
 })
 it('rejects changed proof signatures and corrupt saved records', async () => {

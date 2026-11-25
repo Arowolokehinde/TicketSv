@@ -44,14 +44,14 @@ it('accepts the signed scanner permit only for its origin and server identity', 
 it('rejects changed, expired and excessively long-lived permits without contacting a service', async () => {
   const f = await fixture(),
     context = { origin: f.permit.origin, serverIdentity: f.server, now: f.now }
-  for (const patch of [
-    { identityKey: f.server },
-    { expiresAt: f.now + 9 * 3600000 },
-    { scope: 'admin' },
-    { signature: 'AAAA' },
-    { issuedAt: f.now + 60000 },
-  ])
-    expect(() => verifyScannerPermit({ ...f.permit, ...patch }, context)).toThrow()
+  for (const [patch, message] of [
+    [{ identityKey: f.server }, 'Scanner authorisation signature is invalid.'],
+    [{ expiresAt: f.now + 9 * 3600000 }, 'Invalid scanner authorisation.'],
+    [{ scope: 'admin' }, 'Invalid scanner authorisation.'],
+    [{ signature: 'AAAA' }, 'Scanner authorisation signature is invalid.'],
+    [{ issuedAt: f.now + 60000 }, 'Scanner authorisation expired or belongs to another website. Sign in online and prepare again.'],
+  ] as const)
+    expect(() => verifyScannerPermit({ ...f.permit, ...patch }, context)).toThrow(message)
   expect(() => verifyScannerPermit(f.permit, { ...context, now: f.permit.expiresAt })).toThrow(
     'Scanner authorisation expired or belongs to another website. Sign in online and prepare again.',
   )

@@ -280,10 +280,12 @@ it('blocks source substitution, and locks a lost signature to the same recipient
     expect(result.signAttempt).toMatchObject({ outcome: 'unknown', walletAsked: true })
     expect(result.transfer).toBeUndefined()
     // Once the wallet was asked, the claim can't be released or marked as never asked.
-    expect(() => readSender({ ...result, revision: result.revision + 1, signAttempt: undefined, request: undefined }, result)).toThrow()
+    expect(() => readSender({ ...result, revision: result.revision + 1, signAttempt: undefined, request: undefined }, result)).toThrow(
+      'A previous attempt cannot be removed or replaced.',
+    )
     expect(() =>
       readSender({ ...result, revision: result.revision + 1, signAttempt: { ...result.signAttempt!, walletAsked: false } }, result),
-    ).toThrow()
+    ).toThrow('Saved attempt outcome cannot change. Reload the existing record.')
     // A different recipient is refused: a signature to the first may exist.
     const someoneElse = await createReceivingRequest(walletFor(4), invitationFor(f.ticket), signal())
     await expect(signHandoff(result, someoneElse, f.wallet, snapshot, signal(), f.store)).rejects.toThrow(/same recipient/)

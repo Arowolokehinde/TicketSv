@@ -29,12 +29,21 @@ it('compares the entire range from independent bulk sources', async () => {
   expect(get).toHaveBeenCalledTimes(4)
 })
 it('rejects disagreement, wrong network and untrusted resource URLs', async () => {
-  for (const mutate of [
-    (u: string) => (u.includes('chaintracks') && u.includes('/headers?') ? new Response(new Uint8Array(160)) : undefined),
-    (u: string) => (u.endsWith('/network') ? Response.json({ status: 'success', value: 'main' }) : undefined),
-    (u: string) => (u.endsWith('/resources') ? Response.json({ files: ['http://127.0.0.1/private'] }) : undefined),
-  ])
-    await expect(collectHeaderRange(a.height, 2, new AbortController().signal, upstream(mutate))).rejects.toThrow()
+  for (const [mutate, message] of [
+    [
+      (u: string) => (u.includes('chaintracks') && u.includes('/headers?') ? new Response(new Uint8Array(160)) : undefined),
+      'Header sources disagree without a bounded common descendant.',
+    ],
+    [
+      (u: string) => (u.endsWith('/network') ? Response.json({ status: 'success', value: 'main' }) : undefined),
+      'Chaintracks network is not testnet.',
+    ],
+    [
+      (u: string) => (u.endsWith('/resources') ? Response.json({ files: ['http://127.0.0.1/private'] }) : undefined),
+      'Untrusted header resource URL.',
+    ],
+  ] as const)
+    await expect(collectHeaderRange(a.height, 2, new AbortController().signal, upstream(mutate))).rejects.toThrow(message)
 })
 it('does not fetch when aborted and bounds bodies even without content length', async () => {
   const get = upstream(),

@@ -10,16 +10,16 @@ const env = {
 }
 it('requires exact HTTPS origins, valid service identity and a dedicated remote database', () => {
   expect(hostedConfig(env)).toMatchObject({ connectionString: env.DATABASE_URL, origins: ['https://ticketsv.example'] })
-  for (const patch of [
-    { DATABASE_URL: '' },
-    { DATABASE_URL: 'postgres://localhost/ticketsv' },
-    { APP_ORIGINS: '*' },
-    { APP_ORIGINS: 'http://ticketsv.example' },
-    { APP_ORIGINS: 'https://ticketsv.example/path' },
-    { AUTH_SERVER_PRIVATE_KEY: '0'.repeat(64) },
-    { AUTH_SERVER_PRIVATE_KEY: 'f'.repeat(64) },
-  ])
-    expect(() => hostedConfig({ ...env, ...patch })).toThrow()
+  for (const [patch, message] of [
+    [{ DATABASE_URL: '' }, 'Configure the hosted PostgreSQL database'],
+    [{ DATABASE_URL: 'postgres://localhost/ticketsv' }, 'Hosted deployment requires a remote PostgreSQL database'],
+    [{ APP_ORIGINS: '*' }, 'APP_ORIGINS must contain exact HTTPS origins'],
+    [{ APP_ORIGINS: 'http://ticketsv.example' }, 'APP_ORIGINS must contain exact HTTPS origins'],
+    [{ APP_ORIGINS: 'https://ticketsv.example/path' }, 'APP_ORIGINS must contain exact HTTPS origins'],
+    [{ AUTH_SERVER_PRIVATE_KEY: '0'.repeat(64) }, 'Configure a valid application authentication identity'],
+    [{ AUTH_SERVER_PRIVATE_KEY: 'f'.repeat(64) }, 'Configure a valid application authentication identity'],
+  ] as const)
+    expect(() => hostedConfig({ ...env, ...patch })).toThrow(message)
   expect(hostedConfig({ ...env, DATABASE_URL_UNPOOLED: 'postgres://direct.example/ticketsv' }).connectionString).toContain('direct.example')
 })
 it('coalesces work in an instance and runs bounded missing batches after responding', async () => {

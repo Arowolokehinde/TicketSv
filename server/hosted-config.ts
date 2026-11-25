@@ -19,8 +19,8 @@ export function hostedConfig(env: Record<string, string | undefined>) {
     throw Error('Configure a valid application authentication identity')
   const origins = (env.APP_ORIGINS ?? '').split(',').map(x => x.trim())
   for (const value of origins) {
-    const url = new URL(value)
-    if (url.protocol !== 'https:' || url.origin !== value) throw Error('APP_ORIGINS must contain exact HTTPS origins')
+    const url = URL.parse(value)
+    if (url?.protocol !== 'https:' || url.origin !== value) throw Error('APP_ORIGINS must contain exact HTTPS origins')
   }
   return { connectionString, key: PrivateKey.fromHex(secret), origins }
 }

@@ -156,15 +156,15 @@ it('verifies a package below 4 MiB without rejecting expanded intermediate JSON'
 }, 20000)
 it('rejects oversize, malformed UTF-8 IDs/base64, excessive lineage and invalid key conventions', async () => {
   const f = await ticketFixture()
-  for (const mutate of [
-    (p: typeof f.pkg) => (p.issuance.eventId = 'x'.repeat(129)),
-    (p: typeof f.pkg) => (p.issuance.ticketId = '\ud800'),
-    (p: typeof f.pkg) => (p.atomicBeefBase64 += '!'),
-    (p: typeof f.pkg) => (p.lineageRawTxs = Array(102).fill(p.lineageRawTxs[0])),
-  ]) {
+  for (const [mutate, message] of [
+    [(p: typeof f.pkg) => (p.issuance.eventId = 'x'.repeat(129)), 'Invalid ticket package or receiving request'],
+    [(p: typeof f.pkg) => (p.issuance.ticketId = '\ud800'), 'Invalid ticket package or receiving request'],
+    [(p: typeof f.pkg) => (p.atomicBeefBase64 += '!'), 'Invalid ticket package or receiving request'],
+    [(p: typeof f.pkg) => (p.lineageRawTxs = Array(102).fill(p.lineageRawTxs[0])), 'Retain issuance and at most 100 ticket transfers'],
+  ] as const) {
     const p = structuredClone(f.pkg)
     mutate(p)
-    expect(() => readTicketPackage(JSON.stringify(p))).toThrow()
+    expect(() => readTicketPackage(JSON.stringify(p))).toThrow(message)
   }
   expect(() => readTicketPackage(' '.repeat(4 * 1024 * 1024 + 1))).toThrow('Ticket envelope exceeds 4 MiB limit')
   expect(() => readReceiveRequest(JSON.stringify({ ...f.source, recipient: { ...f.source.recipient, counterparty: 'anyone' } }))).toThrow(

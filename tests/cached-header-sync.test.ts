@@ -45,7 +45,11 @@ it('downloads a compact batch, validates it, and preserves cache provenance on d
 })
 it('rechecks an existing boundary, does not overwrite on conflict or bad metadata', async () => {
   const old = makeSnapshot([records[0]])
-  for (const response of [batch(new Uint8Array(160)), new Response(body), batch(body.slice(1))]) {
+  for (const [response, message] of [
+    [batch(new Uint8Array(160)), 'Invalid compact target'],
+    [new Response(body), 'Shared header range unavailable or invalid. Saved progress retained.'],
+    [batch(body.slice(1)), 'Header batch length does not match its requested range.'],
+  ] as const) {
     let saved = false
     vi.stubGlobal(
       'fetch',
@@ -55,7 +59,7 @@ it('rechecks an existing boundary, does not overwrite on conflict or bad metadat
       syncCachedHeaders(b.height, old, new AbortController().signal, undefined, async () => {
         saved = true
       }),
-    ).rejects.toThrow()
+    ).rejects.toThrow(message)
     expect(saved).toBe(false)
   }
 })

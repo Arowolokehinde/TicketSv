@@ -182,24 +182,30 @@ it('rejects a substituted buyer key and a request that keeps the original holder
   ).rejects.toThrow('Invalid ticket package or receiving request')
   await expect(restoreTicketPreparation(wallet, prep.pkg, prep.source, identity)).rejects.toThrow(/different/i)
 })
-it.each(['ticket absent', 'change absent', 'unspendable', 'wrong script', 'wrong value', 'ticket as change', 'duplicate', 'truncated'])(
-  'refuses recovery with %s wallet evidence',
-  async mode => {
-    const { wallet, identity, prep, ticket, change } = await recoveryFixture()
-    wallet.listOutputs = vi.fn(async args => {
-      let outputs = args.basket === 'counterfoil-ticket-experiment' ? [ticket] : [change]
-      if (mode === 'ticket absent' && args.basket === 'counterfoil-ticket-experiment') outputs = []
-      if (mode === 'change absent' && args.basket !== 'counterfoil-ticket-experiment') outputs = []
-      if (mode === 'unspendable') outputs = outputs.map(o => ({ ...o, spendable: false }))
-      if (mode === 'wrong script') outputs = outputs.map(o => ({ ...o, lockingScript: '51' }))
-      if (mode === 'wrong value') outputs = outputs.map(o => ({ ...o, satoshis: 9 }))
-      if (mode === 'ticket as change') outputs = [ticket]
-      if (mode === 'duplicate') outputs = [...outputs, ...outputs]
-      return { totalOutputs: mode === 'truncated' ? 1001 : outputs.length, outputs }
-    })
-    await expect(restoreTicketPreparation(wallet, prep.pkg, prep.destination, identity)).rejects.toThrow()
-  },
-)
+it.each([
+  ['ticket absent', 'Original ticket is not listed as spendable; review pending wallet actions'],
+  ['change absent', 'Required managed change is unavailable; keep the isolated wallet running and review its pending actions'],
+  ['unspendable', 'Wallet output does not match the available issuance output'],
+  ['wrong script', 'Wallet output does not match the available issuance output'],
+  ['wrong value', 'Wallet output does not match the available issuance output'],
+  ['ticket as change', 'Required managed change is unavailable; keep the isolated wallet running and review its pending actions'],
+  ['duplicate', 'Wallet returned duplicate outputs'],
+  ['truncated', 'Wallet output listing is incomplete; review wallet state before restoring'],
+])('refuses recovery with %s wallet evidence', async (mode, message) => {
+  const { wallet, identity, prep, ticket, change } = await recoveryFixture()
+  wallet.listOutputs = vi.fn(async args => {
+    let outputs = args.basket === 'counterfoil-ticket-experiment' ? [ticket] : [change]
+    if (mode === 'ticket absent' && args.basket === 'counterfoil-ticket-experiment') outputs = []
+    if (mode === 'change absent' && args.basket !== 'counterfoil-ticket-experiment') outputs = []
+    if (mode === 'unspendable') outputs = outputs.map(o => ({ ...o, spendable: false }))
+    if (mode === 'wrong script') outputs = outputs.map(o => ({ ...o, lockingScript: '51' }))
+    if (mode === 'wrong value') outputs = outputs.map(o => ({ ...o, satoshis: 9 }))
+    if (mode === 'ticket as change') outputs = [ticket]
+    if (mode === 'duplicate') outputs = [...outputs, ...outputs]
+    return { totalOutputs: mode === 'truncated' ? 1001 : outputs.length, outputs }
+  })
+  await expect(restoreTicketPreparation(wallet, prep.pkg, prep.destination, identity)).rejects.toThrow(message)
+})
 it('refuses restoration after the wallet changes profiles during output lookup', async () => {
   const { wallet, identity, prep } = await recoveryFixture(),
     get = wallet.getPublicKey.bind(wallet),

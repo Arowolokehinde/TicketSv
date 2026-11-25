@@ -61,7 +61,13 @@ export function verifyScannerPermit(value: unknown, context: { origin: string; s
   if (v.origin !== context.origin || v.expiresAt <= now || v.issuedAt > now + 30000)
     throw Error('Scanner authorisation expired or belongs to another website. Sign in online and prepare again.')
   const key = new KeyDeriver('anyone').derivePublicKey(SCANNER_AUTH_PROTOCOL, SCANNER_AUTH_KEY, publicKey(context.serverIdentity))
-  if (!Signature.fromDER(fromBase64(v.signature, 80)).verify(data, key)) throw Error('Scanner authorisation signature is invalid.')
+  let valid: boolean
+  try {
+    valid = Signature.fromDER(fromBase64(v.signature, 80)).verify(data, key)
+  } catch {
+    valid = false // A damaged signature is invalid, not an internal error.
+  }
+  if (!valid) throw Error('Scanner authorisation signature is invalid.')
   return {
     kind: v.kind,
     version: 1,

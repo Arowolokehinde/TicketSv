@@ -23,7 +23,12 @@ describe('checkpoint-bound headers', () => {
     expect(validateHeader(b.hex).merkleRoot).toBe(woc1.merkleroot)
     expect(makeSnapshot([a, b]).headers).toHaveLength(2)
   })
-  it.each([0, 0x1d80ffff, 0x2300ffff, 0x1e00ffff])('rejects invalid target %s', bits => expect(() => compactTarget(bits)).toThrow())
+  it.each([
+    [0, 'Invalid compact target'],
+    [0x1d80ffff, 'Invalid compact target'],
+    [0x2300ffff, 'Invalid compact target'],
+    [0x1e00ffff, 'Compact target outside testnet bounds'],
+  ])('rejects invalid target %s', (bits, message) => expect(() => compactTarget(bits)).toThrow(message))
   it('rejects short headers, invalid PoW, wrong claimed height/hash and linkage', () => {
     const [a, b] = records()
     expect(() => validateHeader(b.hex.slice(2))).toThrow('Header must contain exactly 80 bytes')

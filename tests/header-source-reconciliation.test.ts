@@ -31,12 +31,12 @@ it('refuses a differing batch tip and refuses wrong-height or wrong-byte hash re
   await expect(collectHeaderRange(a.height, 3, new AbortController().signal, sources(correct, true))).rejects.toThrow(
     'Header sources disagree without a bounded common descendant.',
   )
-  for (const lookup of [
-    orphan,
-    { ...correct, value: { ...correct.value, height: b.height + 1 } },
-    { ...correct, value: { ...correct.value, nonce: 0 } },
-  ]) {
-    await expect(collectHeaderRange(a.height, 3, new AbortController().signal, sources(lookup))).rejects.toThrow()
+  for (const [lookup, message] of [
+    [orphan, 'Linked header sources still disagree.'],
+    [{ ...correct, value: { ...correct.value, height: b.height + 1 } }, 'Header height/hash fields do not match'],
+    [{ ...correct, value: { ...correct.value, nonce: 0 } }, 'Header proof of work failed'],
+  ] as const) {
+    await expect(collectHeaderRange(a.height, 3, new AbortController().signal, sources(lookup))).rejects.toThrow(message)
   }
 })
 it('keeps unresolved and unavailable hash lookups blocked', async () => {

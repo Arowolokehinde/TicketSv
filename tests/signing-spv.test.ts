@@ -31,13 +31,13 @@ it('rejects a proof moved to another locally known height', async () => {
   await expect(verifySigningEvidence(readSigningEvidence(JSON.stringify(altered)), makeSnapshot(headers))).rejects.toThrow(/Merkle/i)
 })
 it('rejects invalid envelopes, byte arrays and mismatched txids', () => {
-  for (const obj of [
-    {},
-    { ...fixture, network: 'mainnet' },
-    { ...fixture, final: { ...fixture.final, txid: '00'.repeat(32) } },
-    { ...fixture, final: { ...fixture.final, atomicBeef: [256] } },
-  ])
-    expect(() => readSigningEvidence(JSON.stringify(obj))).toThrow()
+  for (const [obj, message] of [
+    [{}, 'Load a Counterfoil testnet signing-result JSON file'],
+    [{ ...fixture, network: 'mainnet' }, 'Load a Counterfoil testnet signing-result JSON file'],
+    [{ ...fixture, final: { ...fixture.final, txid: '00'.repeat(32) } }, 'Incomplete or invalid Atomic BEEF'],
+    [{ ...fixture, final: { ...fixture.final, atomicBeef: [256] } }, 'Invalid signing evidence bytes'],
+  ] as const)
+    expect(() => readSigningEvidence(JSON.stringify(obj))).toThrow(message)
 })
 it('rejects an unsigned spend even when its ancestor has a valid Merkle anchor', async () => {
   const parent = Transaction.fromAtomicBEEF(fixture.final.atomicBeef)

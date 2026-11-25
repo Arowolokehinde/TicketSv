@@ -156,13 +156,13 @@ it('preserves funding receipts and exact funding transaction through subsequent 
     rawReceipt: { txid: ticket.pkg.current.txid, tx: [1, 2, 3] },
   }
   const claimed = readSender({ ...first, revision: 1, funding, fundAttempt: { id: 'claim', outcome: 'pending', startedAt: now } }, first)
-  for (const change of [
-    { rawReceipt: { txid: '00'.repeat(32) } },
-    { rawReceipt: undefined },
-    { amount: 2 },
-    { key: { ...funding.key, keyID: 'another-source' } },
-  ])
-    expect(() => readSender({ ...claimed, revision: 2, funding: { ...funding, ...change } }, claimed)).toThrow()
+  for (const [change, message] of [
+    [{ rawReceipt: { txid: '00'.repeat(32) } }, 'Saved funding rawReceipt cannot change. Reload the existing record.'],
+    [{ rawReceipt: undefined }, 'Saved funding rawReceipt cannot change. Reload the existing record.'],
+    [{ amount: 2 }, 'Saved funding amount cannot change. Reload the existing record.'],
+    [{ key: { ...funding.key, keyID: 'another-source' } }, 'Saved funding key cannot change. Reload the existing record.'],
+  ] as const)
+    expect(() => readSender({ ...claimed, revision: 2, funding: { ...funding, ...change } }, claimed)).toThrow(message)
   const unknown = readSender(
     { ...claimed, revision: 2, fundAttempt: { ...claimed.fundAttempt, outcome: 'unknown', finishedAt: now } },
     claimed,
