@@ -1,7 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
-import { PrivateKey } from '@bsv/sdk'
+import { MerklePath, PrivateKey, Transaction } from '@bsv/sdk'
 import { syntheticSigningWallet } from './helpers/synthetic-signing-wallet.ts'
-import { findIssuanceAction, prepareVenueRecipient, issueVenueTicket } from '../src/wallet/venue-issuance.ts'
+import {
+  findIssuanceAction,
+  issuanceActionFailed,
+  prepareVenueRecipient,
+  issueVenueTicket,
+  recoverVenueTicket,
+} from '../src/wallet/venue-issuance.ts'
+import { fromBase64 } from '../src/tickets/codec.ts'
 import { verifyIssuer, verifyContinuity, verifyRecipient } from '../src/verification/authenticity.ts'
 
 async function fixture() {
@@ -127,5 +134,59 @@ describe('findIssuanceAction', () => {
     await expect(findIssuanceAction(wallet, owner, ticketId)).rejects.toThrow(/testnet/i)
     expect(wallet.listActions).not.toHaveBeenCalled()
     await expect(findIssuanceAction(reader([]), PrivateKey.fromRandom().toPublicKey().toString(), ticketId)).rejects.toThrow(/identity/i)
+  })
+  it('reports a failed transaction only when the wallet says so for that ID, with nothing live', async () => {
+    const failed = 'a'.repeat(64)
+    expect(await issuanceActionFailed(reader([action('a', 'failed')]), owner, ticketId, failed)).toBe(true)
+    expect(await issuanceActionFailed(reader([action('a', 'unproven')]), owner, ticketId, failed)).toBe(false)
+    expect(await issuanceActionFailed(reader([]), owner, ticketId, failed)).toBe(false)
+    expect(await issuanceActionFailed(reader([action('b', 'failed')]), owner, ticketId, failed)).toBe(false)
+    expect(await issuanceActionFailed(reader([action('a', 'failed'), action('b', 'completed')]), owner, ticketId, failed)).toBe(false)
+    await expect(issuanceActionFailed(reader([action('a', 'failed')], { totalActions: 2 }), owner, ticketId, failed)).rejects.toThrow(
+      'The wallet returned an incomplete transaction list. Do not issue again; check the wallet history.',
+    )
+  })
+})
+describe('recoverVenueTicket', () => {
+  async function stuck() {
+    const { wallet, owner, request } = await fixture()
+    const pkg = await issueVenueTicket(wallet, owner, 'event-test', 'ticket-test', request, async () => {})
+    return { wallet, owner, request, pkg, txid: pkg.current.txid, beef: fromBase64(pkg.atomicBeefBase64) }
+  }
+  it('rebuilds exactly the package the lost device had, without a new transaction', async () => {
+    const { wallet, owner, request, pkg, txid, beef } = await stuck()
+    const create = vi.spyOn(wallet, 'createAction')
+    expect(await recoverVenueTicket(wallet, owner, 'event-test', 'ticket-test', request, txid, beef)).toEqual(pkg)
+    expect(create).not.toHaveBeenCalled()
+  })
+  it('refuses a transaction with another ID', async () => {
+    const { wallet, owner, request, beef } = await stuck()
+    await expect(recoverVenueTicket(wallet, owner, 'event-test', 'ticket-test', request, 'ab'.repeat(32), beef)).rejects.toThrow(
+      'The returned txid does not match the transaction.',
+    )
+  })
+  it('refuses a ticket paid to another recipient', async () => {
+    const { wallet, owner, txid, beef } = await stuck()
+    const other = await prepareVenueRecipient(wallet, owner, 'ticket-other')
+    await expect(recoverVenueTicket(wallet, owner, 'event-test', 'ticket-test', other, txid, beef)).rejects.toThrow(
+      'The expected one-satoshi output was changed or duplicated.',
+    )
+  })
+  it('refuses mined evidence', async () => {
+    const { wallet, owner, request, txid, beef } = await stuck()
+    const mined = Transaction.fromAtomicBEEF(beef)
+    mined.merklePath = new MerklePath(1, [[{ offset: 0, hash: txid, txid: true }]])
+    await expect(recoverVenueTicket(wallet, owner, 'event-test', 'ticket-test', request, txid, mined.toAtomicBEEF())).rejects.toThrow(
+      'Expected a newly created, unmined transaction.',
+    )
+  })
+  it('stops before signing for another wallet identity', async () => {
+    const { wallet, request, txid, beef } = await stuck()
+    const sign = vi.spyOn(wallet, 'createSignature')
+    const stranger = PrivateKey.fromRandom().toPublicKey().toString()
+    await expect(recoverVenueTicket(wallet, stranger, 'event-test', 'ticket-test', request, txid, beef)).rejects.toThrow(
+      'The wallet identity differs from your signed-in account.',
+    )
+    expect(sign).not.toHaveBeenCalled()
   })
 })

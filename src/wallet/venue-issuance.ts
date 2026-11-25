@@ -5,7 +5,7 @@ import { issuanceBytes, ticketScript } from '../tickets/script.ts'
 import { verifyIssuer, verifyContinuity, verifyRecipient } from '../verification/authenticity.ts'
 import { verifyRequestProof } from '../marketplace/request-proof.ts'
 import type { RequestProof } from '../marketplace/types.ts'
-import { inspectFinal } from './signing-experiment.ts'
+import { inspectFinal, type FinalEvidence } from './signing-experiment.ts'
 import { checkWallet } from './identity.ts'
 
 type Reader = Pick<WalletInterface, 'getNetwork' | 'getPublicKey'>
@@ -32,21 +32,36 @@ export async function prepareVenueRecipient(wallet: Reader, owner: string, ticke
 }
 // Read-only: finds the live wallet transaction an issuance attempt created, if
 // any. Failed actions never reach the chain, so they count as absent.
-export async function findIssuanceAction(
-  wallet: Reader & Pick<WalletInterface, 'listActions'>,
-  owner: string,
-  ticketId: string,
-): Promise<string | undefined> {
+async function issuanceActions(wallet: Reader & Pick<WalletInterface, 'listActions'>, owner: string, ticketId: string) {
   identifier(ticketId)
   await checkVenueWallet(wallet, owner)
   const listed = await wallet.listActions({ labels: [`ticketsv-issuance-${ticketId}`], labelQueryMode: 'any', limit: 100 })
   if (!Array.isArray(listed.actions) || listed.totalActions !== listed.actions.length)
     throw Error('The wallet returned an incomplete transaction list. Do not issue again; check the wallet history.')
-  const live = listed.actions.filter(action => action.status !== 'failed')
+  return listed.actions
+}
+export async function findIssuanceAction(
+  wallet: Reader & Pick<WalletInterface, 'listActions'>,
+  owner: string,
+  ticketId: string,
+): Promise<string | undefined> {
+  const live = (await issuanceActions(wallet, owner, ticketId)).filter(action => action.status !== 'failed')
   if (live.length > 1) throw Error('Several wallet transactions carry this ticket label. Do not issue again; check the wallet history.')
   if (live.length && !/^[a-f0-9]{64}$/.test(live[0].txid))
     throw Error('The wallet returned an invalid transaction ID. Do not issue again; check the wallet history.')
   return live[0]?.txid
+}
+// Read-only. True only when the wallet reports this saved transaction as failed
+// and holds no live one for the ticket: it can never be mined, so any signed copy
+// names an output that never exists and the attempt may return to approval.
+export async function issuanceActionFailed(
+  wallet: Reader & Pick<WalletInterface, 'listActions'>,
+  owner: string,
+  ticketId: string,
+  txid: string,
+): Promise<boolean> {
+  const actions = await issuanceActions(wallet, owner, ticketId)
+  return actions.some(action => action.txid === txid && action.status === 'failed') && actions.every(action => action.status === 'failed')
 }
 export async function issueVenueTicket(
   wallet: WalletInterface,
@@ -119,6 +134,35 @@ async function issueToRecipient(
   if (response.txid && /^[a-f0-9]{64}$/.test(response.txid)) await checkpoint(response.txid)
   const final = await inspectFinal(response, script)
   if (!response.txid) await checkpoint(final.txid)
+  return signIssuance(wallet, owner, eventId, ticketId, recipient, final)
+}
+// Completes an attempt whose transaction ID is saved but whose evidence is not,
+// from that transaction rebuilt from the chain. No transaction is created. The
+// wallet signs deterministically, so the package equals any copy that was lost.
+export async function recoverVenueTicket(
+  wallet: WalletInterface,
+  owner: string,
+  eventId: string,
+  ticketId: string,
+  request: ReceiveRequest,
+  txid: string,
+  atomicBeef: number[],
+): Promise<TicketPackage> {
+  identifier(eventId)
+  identifier(ticketId)
+  const recipient = readReceiveRequest(JSON.stringify(request))
+  await checkVenueWallet(wallet, owner)
+  const final = await inspectFinal({ txid, tx: atomicBeef }, ticketScript(eventId, ticketId, null, recipient).toHex())
+  return signIssuance(wallet, owner, eventId, ticketId, recipient, final)
+}
+async function signIssuance(
+  wallet: WalletInterface,
+  owner: string,
+  eventId: string,
+  ticketId: string,
+  recipient: ReceiveRequest,
+  final: FinalEvidence,
+): Promise<TicketPackage> {
   const origin = { txid: final.txid, index: final.outputIndex },
     keyID = `${origin.txid}.${origin.index}`
   await checkVenueWallet(wallet, owner)

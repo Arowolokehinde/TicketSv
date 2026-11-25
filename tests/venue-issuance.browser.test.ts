@@ -63,6 +63,56 @@ for (const status of ['prepared', 'pending', 'complete'] as const) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
   })
 }
+test('Venue offers recovery for a saved transaction without evidence', async ({ page, context }) => {
+  const fixture = await accountApi(context)
+  const id = 'b54a41c1-e532-42d4-8f86-04f91c547d73',
+    ticketId = '4dfe41f8-9716-4974-999b-79fb6a840d5d',
+    now = new Date().toISOString()
+  const event = { id, name: 'Harbour Nights', description: '', date: '2027-06-12', time: '19:30', timezone: 'Africa/Lagos' }
+  fixture.records.set(id, {
+    ...event,
+    venue: 'Harbour Hall',
+    address: '14 Marina Road',
+    image: null,
+    revision: 1,
+    status: 'draft',
+    createdAt: now,
+    updatedAt: now,
+  })
+  const record = {
+    id: ticketId,
+    eventId: id,
+    owner: '02' + '11'.repeat(32),
+    eventRevision: 1,
+    event,
+    status: 'pending',
+    txid: 'ab'.repeat(32),
+    pkg: null,
+    request: { requestId: `${ticketId}-source`, recipient: { publicKey: '03' + '22'.repeat(32) } },
+    createdAt: now,
+    updatedAt: now,
+  }
+  let mutations = 0,
+    walletCalls = 0
+  await context.route('**/api/events/*/issuances**', route => {
+    if (route.request().method() !== 'GET') mutations++
+    return route.fulfill({ json: { issuances: [record] } })
+  })
+  await context.route('http://localhost:3321/**', route => {
+    walletCalls++
+    return route.abort()
+  })
+  for (const reload of [false, true]) {
+    if (reload) await page.reload()
+    else await page.goto('/venue/my-events')
+    await page.getByRole('button', { name: 'Tickets for Harbour Nights' }).click()
+    await expect(page.getByText(/its evidence was not saved/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Recover ticket', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Issue and broadcast ticket', exact: true })).toHaveCount(0)
+  }
+  expect(mutations).toBe(0)
+  expect(walletCalls).toBe(0)
+})
 
 test('issues once after consent, recovers a failed evidence save after reload without another transaction', async ({
   page,
@@ -148,6 +198,96 @@ test('issues once after consent, recovers a failed evidence save after reload wi
   await expect(page.getByRole('button', { name: 'Save existing evidence again' })).toHaveCount(0)
   expect(creations).toBe(1)
   await expect(page.getByRole('button', { name: 'Issue and broadcast ticket', exact: true })).toHaveCount(0)
+})
+
+test('recovers a ticket whose signature step failed, from the chain, without another transaction', async ({ page, context }) => {
+  const { syntheticSigningWallet } = await import('./helpers/synthetic-signing-wallet.ts')
+  const { Transaction, Utils } = await import('@bsv/sdk')
+  const wallet = syntheticSigningWallet(),
+    owner = (await wallet.getPublicKey({ identityKey: true })).publicKey
+  const fixture = await accountApi(context)
+  fixture.setSession({ identityKey: owner, network: 'testnet', expiresAt: new Date(Date.now() + 3600_000).toISOString() })
+  const id = 'b54a41c1-e532-42d4-8f86-04f91c547d73',
+    now = new Date().toISOString()
+  const event = {
+    id,
+    name: 'Harbour Nights',
+    description: '',
+    date: '2027-06-12',
+    time: '19:30',
+    timezone: 'Africa/Lagos',
+    venue: 'Harbour Hall',
+    address: '14 Marina Road',
+    image: null,
+    revision: 1,
+    status: 'draft',
+    createdAt: now,
+    updatedAt: now,
+  }
+  fixture.records.set(id, event)
+  let record: any,
+    created: InstanceType<typeof Transaction> | undefined,
+    declineSignature = true,
+    creations = 0
+  await context.route('http://localhost:3321/**', async route => {
+    const method = new URL(route.request().url()).pathname.slice(1) as keyof typeof wallet
+    if (method === 'createSignature' && declineSignature) return route.abort()
+    const result = await (wallet[method] as (args: unknown) => Promise<any>)(route.request().postDataJSON())
+    if (method === 'createAction') {
+      creations++
+      created = Transaction.fromAtomicBEEF(result.tx)
+    }
+    await route.fulfill({ json: result })
+  })
+  // WhatsOnChain serves what the wallet broadcast: the raw transaction and its parents' BEEF.
+  await context.route('https://api.whatsonchain.com/**', route => {
+    const path = new URL(route.request().url()).pathname,
+      headers = { 'access-control-allow-origin': '*' }
+    if (created && path.endsWith(`/tx/${created.id('hex')}/hex`)) return route.fulfill({ body: created.toHex(), headers })
+    const parent = created?.inputs.find(input => path.endsWith(`/tx/${input.sourceTXID}/beef`))?.sourceTransaction
+    if (parent) return route.fulfill({ body: Utils.toHex(parent.toBEEF()), headers })
+    return route.fulfill({ status: 404, body: 'Not found', headers })
+  })
+  await context.route('**/api/events/*/issuances**', async route => {
+    const path = new URL(route.request().url()).pathname,
+      body = route.request().postDataJSON()
+    if (route.request().method() === 'GET') return route.fulfill({ json: { issuances: record ? [record] : [] } })
+    if (path.endsWith('/issuances'))
+      record = {
+        id: body.ticketId,
+        eventId: id,
+        event,
+        owner,
+        eventRevision: 1,
+        request: body.request,
+        status: 'prepared',
+        pkg: null,
+        txid: null,
+      }
+    if (path.endsWith('/start')) record.status = 'pending'
+    if (path.endsWith('/reference')) record.txid = body.txid
+    if (path.endsWith('/evidence')) {
+      record.pkg = body.pkg
+      record.status = 'complete'
+    }
+    return route.fulfill({ json: record })
+  })
+  await page.goto('/venue/my-events')
+  await page.getByRole('button', { name: 'Tickets for Harbour Nights' }).click()
+  await page.getByRole('button', { name: /Review new ticket/ }).click()
+  await page.getByRole('checkbox').check()
+  await page.getByRole('button', { name: 'Issue and broadcast ticket', exact: true }).click()
+  await expect(page.getByRole('alert')).toBeVisible()
+  expect(record.txid).toBe(created!.id('hex'))
+  expect(record.pkg).toBeNull()
+  await page.reload()
+  await page.getByRole('button', { name: 'Tickets for Harbour Nights' }).click()
+  declineSignature = false
+  await page.getByRole('button', { name: 'Recover ticket', exact: true }).click()
+  await expect(page.getByText('Ticket recovered from the blockchain and saved. No transaction was repeated.')).toBeVisible()
+  await expect(page.locator('.issuance-status')).toHaveText('Ticket evidence saved')
+  expect(record.pkg.current.txid).toBe(created!.id('hex'))
+  expect(creations).toBe(1)
 })
 
 // Header responses are recorded fixtures; these tests never contact a real wallet or provider.

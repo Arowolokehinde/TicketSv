@@ -198,7 +198,11 @@ New handoffs first ask the wallet to build and record the transfer itself (`crea
 
 An issuance attempt is marked started before the wallet is asked to create the ticket. If the wallet prompt is declined or times out, the attempt shows **Check wallet**. TicketSV asks the organiser wallet for transactions labelled `ticketsv-issuance-<ticketId>` (`listActions`). If none exists, or every one failed, the attempt returns to approval with the same ticket ID. If one exists, its transaction ID is saved instead. The server resets an attempt only while no transaction ID is saved. The venue signature is requested only after that ID is saved, so a late wallet transaction can never verify as a second ticket.
 
-An attempt whose transaction ID is saved but whose evidence never reached the server cannot be recovered in the app yet. If this device still holds the evidence, use **Save existing evidence again**.
+An attempt whose transaction ID is saved but whose evidence never reached the server shows **Recover ticket**. This happens when the signature prompt is declined or times out after the transaction was created, when the wallet's reply is lost and **Check wallet** finds only the transaction ID, or when the evidence save fails on another device. If this device still holds the evidence, it shows **Save existing evidence again** instead.
+
+**Recover ticket** creates no transaction. TicketSV fetches the transaction and its parents' BEEF from WhatsOnChain and rebuilds the unmined ticket evidence. The bytes must hash to the saved transaction ID, and the one 1-satoshi output must pay the reviewed recipient. The organiser's wallet then signs the ticket again. Signing is deterministic, so the package equals any copy that was lost. The evidence is saved through the normal route, which still accepts only unmined first evidence with its scripts checked.
+
+If WhatsOnChain does not know the transaction, **Check for a failed transaction** appears. Only when the organiser's wallet reports that transaction as failed, and the network still does not know it, does the attempt return to approval (the server clears the transaction ID only when it is named). A failed transaction never reaches the chain, so any signature made for it names an output that never exists.
 
 ## Offline use and verification limits
 

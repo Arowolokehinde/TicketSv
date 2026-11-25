@@ -284,6 +284,12 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('signed authentication and Postg
     expect((await a.request(`${path}/${review.id}/reference`, { txid: 'a'.repeat(64) })).status).toBe(200)
     expect((await a.request(`${path}/${review.id}/reference`, { txid: 'b'.repeat(64) })).status).toBe(409)
     expect((await a.request(`${path}/${review.id}/reset`, {})).status).toBe(409)
+    // A transaction the wallet reports as failed returns the attempt to approval.
+    expect((await a.request(`${path}/${review.id}/reset`, { failedTxid: 'b'.repeat(64) })).status).toBe(409)
+    expect((await b.request(`${path}/${review.id}/reset`, { failedTxid: 'a'.repeat(64) })).status).toBe(404)
+    const returned = await a.request(`${path}/${review.id}/reset`, { failedTxid: 'a'.repeat(64) })
+    expect(returned.status).toBe(200)
+    expect(await returned.json()).toMatchObject({ status: 'prepared', txid: null })
   })
 
   it("never reveals whether another organiser's ticket ID exists", async () => {
@@ -345,6 +351,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('signed authentication and Postg
     expect((await saved.json()).status).toBe('complete')
     expect((await c.request(path + '/evidence', { pkg })).status).toBe(200)
     expect((await c.request(path + '/start', {})).status).toBe(409)
+    expect((await c.request(path + '/reset', { failedTxid: pkg.current.txid })).status).toBe(409)
     await c.request(`/api/events/${eventRecord.id}`, { ...event, name: 'Edited later', revision: 1 }, 'PUT')
     const records = await (await c.request(base)).json()
     expect(records.issuances[0].event.name).toBe(event.name)

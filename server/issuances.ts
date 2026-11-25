@@ -131,10 +131,16 @@ export function issuanceRoutes(app: Express, pool: Pool) {
   })
   // The venue signature is requested only after /reference saves a txid, so a
   // late wallet transaction for an attempt without one can never verify.
-  app.post(`${base}/:ticketId/reset`, async (_req, res) => {
+  // A saved txid can be cleared only by naming it, after the organiser's wallet
+  // reported that transaction failed: it never reaches the chain, so any
+  // signature made for it names an output that never exists.
+  app.post(`${base}/:ticketId/reset`, async (req, res) => {
+    const failedTxid = req.body.failedTxid
+    if (failedTxid !== undefined && (typeof failedTxid !== 'string' || !/^[a-f0-9]{64}$/.test(failedTxid)))
+      throw new ApiError(400, 'Invalid transaction ID.')
     const result = await pool.query(
-      "UPDATE venue_issuances SET status='prepared', updated_at=now() WHERE id=$1 AND owner_key=$2 AND status='pending' AND txid IS NULL AND package IS NULL RETURNING *",
-      [res.locals.issuance.id, res.locals.owner],
+      "UPDATE venue_issuances SET status='prepared', txid=NULL, updated_at=now() WHERE id=$1 AND owner_key=$2 AND status='pending' AND txid IS NOT DISTINCT FROM $3 AND package IS NULL RETURNING *",
+      [res.locals.issuance.id, res.locals.owner, failedTxid ?? null],
     )
     if (!result.rowCount) throw new ApiError(409, 'Only a started attempt with no saved transaction can be reset.')
     res.json(issuanceRecord({ ...result.rows[0], attendee_proof: res.locals.issuance.attendee_proof }))

@@ -39,3 +39,16 @@ it('does not send an old organiser draft after delayed image encoding and an acc
   await rejected
   advanceAuthEpoch(null)
 })
+
+it('treats a sign-out, an account switch or a sign-in again as a different account', async () => {
+  const { advanceAuthEpoch, currentAuthEpoch, sameAccount } = await import('../src/auth/api.ts')
+  advanceAuthEpoch('account-a')
+  const epoch = currentAuthEpoch()
+  expect(sameAccount(epoch, 'account-a')).toBe(true)
+  expect(sameAccount(epoch, 'account-b')).toBe(false)
+  advanceAuthEpoch('account-a')
+  expect(sameAccount(epoch, 'account-a')).toBe(false)
+  expect(sameAccount(currentAuthEpoch(), 'account-a')).toBe(true)
+  advanceAuthEpoch(null)
+  expect(sameAccount(currentAuthEpoch(), 'account-a')).toBe(false)
+})

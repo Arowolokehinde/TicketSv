@@ -3,6 +3,7 @@ let authEpoch = 0
 let authIdentity: string | null = null
 export const currentAuthIdentity = () => authIdentity
 export const currentAuthEpoch = () => authEpoch
+export const sameAccount = (epoch: number, identity: string) => authEpoch === epoch && authIdentity === identity
 export const advanceAuthEpoch = (identity: string | null) => {
   authEpoch++
   authIdentity = identity

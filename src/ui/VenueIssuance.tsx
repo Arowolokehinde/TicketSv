@@ -5,7 +5,7 @@ import { VenueRequests } from './VenueRequests.tsx'
 import type { AttendeeRequest } from '../marketplace/types.ts'
 import { useEffect, useRef, useState } from 'react'
 import type { WalletInterface } from '@bsv/sdk'
-import { api, currentAuthEpoch, currentAuthIdentity } from '../auth/api.ts'
+import { api, currentAuthEpoch, sameAccount } from '../auth/api.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import type { AccountEvent } from '../events/api.ts'
 import type { VenueIssuance as Issuance } from '../events/issuance-types.ts'
@@ -49,6 +49,8 @@ export function VenueIssuance({
   const [verifying, setVerifying] = useState(false),
     [headerProgress, setHeaderProgress] = useState<HeaderSyncProgress>()
   const [recovery, setRecovery] = useState<TicketPackage>()
+  // The saved transaction the network did not know on the last recovery attempt.
+  const [unseenTxid, setUnseenTxid] = useState<string>()
   const [transport, setTransport] = useState<WalletTransport>(() => {
     try {
       const value = sessionStorage.getItem('ticketsv-wallet-transport')
@@ -133,8 +135,7 @@ export function VenueIssuance({
     setReport(undefined)
     const check = () => {
       controller.signal.throwIfAborted()
-      if (!mounted.current || currentAuthEpoch() !== epoch || currentAuthIdentity() !== owner)
-        throw Error('The signed-in account changed. Stop and review this attempt.')
+      if (!mounted.current || !sameAccount(epoch, owner)) throw Error('The signed-in account changed. Stop and review this attempt.')
     }
     const timer = setTimeout(
       () => controller.abort(Error('Wallet operation timed out. Any started issuance must be reviewed; do not repeat it.')),
@@ -285,6 +286,59 @@ export function VenueIssuance({
       setConsent(false)
       setNotice('Your wallet has no transaction for this ticket. It is ready for your approval again.')
     })
+  // A saved transaction whose evidence was never saved: rebuild it from the chain
+  // and have the wallet sign the ticket again. No transaction is created.
+  const recover = () =>
+    perform(async (wallet, check) => {
+      if (!record || record.status !== 'pending' || !record.txid || needsSave) return
+      const txid = record.txid
+      const { fetchIssuedTransaction, NOT_VISIBLE } = await import('../events/chain-transaction.ts')
+      const { recoverVenueTicket } = await import('../wallet/venue-issuance.ts')
+      check()
+      let beef: number[]
+      try {
+        beef = await fetchIssuedTransaction(txid, AbortSignal.timeout(45_000))
+      } catch (failure) {
+        if ((failure as Error).message === NOT_VISIBLE) setUnseenTxid(txid)
+        throw failure
+      }
+      check()
+      const pkg = await recoverVenueTicket(wallet, owner, record.eventId, record.id, record.request, txid, beef)
+      check()
+      setRecovery(pkg)
+      await venueEvidence(owner, record.id, pkg)
+      check()
+      accept(await api<Issuance>(`${base}/${record.id}/evidence`, { method: 'POST', body: JSON.stringify({ pkg }) }))
+      check()
+      setUnseenTxid(undefined)
+      setNotice('Ticket recovered from the blockchain and saved. No transaction was repeated.')
+    })
+  // Only when the wallet reports the saved transaction failed and the network
+  // still does not know it: no ticket can exist for it, so approval can resume.
+  const returnToApproval = () =>
+    perform(async (wallet, check) => {
+      if (!record || record.status !== 'pending' || !record.txid || needsSave) return
+      const txid = record.txid
+      const { fetchIssuedTransaction, NOT_VISIBLE } = await import('../events/chain-transaction.ts')
+      const { issuanceActionFailed } = await import('../wallet/venue-issuance.ts')
+      check()
+      const failed = await issuanceActionFailed(wallet, owner, record.id, txid)
+      check()
+      let unseen = false
+      try {
+        await fetchIssuedTransaction(txid, AbortSignal.timeout(45_000))
+      } catch (failure) {
+        if ((failure as Error).message !== NOT_VISIBLE) throw failure
+        unseen = true
+      }
+      check()
+      if (!failed || !unseen) throw Error("Your wallet doesn't report this transaction as failed. Try Recover ticket again later.")
+      accept(await api<Issuance>(`${base}/${record.id}/reset`, { method: 'POST', body: JSON.stringify({ failedTxid: txid }) }))
+      check()
+      setUnseenTxid(undefined)
+      setConsent(false)
+      setNotice('Your wallet reports this transaction failed. The ticket is ready for your approval again.')
+    })
   async function saveRecovery() {
     if (!record || !candidate || busy) return
     setBusy(true)
@@ -319,8 +373,7 @@ export function VenueIssuance({
     active.current = controller
     const check = () => {
       controller.signal.throwIfAborted()
-      if (!mounted.current || currentAuthEpoch() !== epoch || currentAuthIdentity() !== owner)
-        throw Error('The signed-in account changed. Verify again after signing in.')
+      if (!mounted.current || !sameAccount(epoch, owner)) throw Error('The signed-in account changed. Verify again after signing in.')
     }
     setBusy(true)
     setVerifying(true)
@@ -535,10 +588,23 @@ export function VenueIssuance({
             (needsSave ? (
               <p className="event-error">This attempt needs review before another ticket can be issued.</p>
             ) : record.txid ? (
-              <p className="event-error">
-                A ticket transaction exists for this attempt, but its evidence was not saved and cannot be recovered here yet. Do not issue
-                it again.
-              </p>
+              <>
+                <p className="event-error">
+                  A ticket transaction exists for this attempt, but its evidence was not saved. Recover it from the blockchain: your wallet
+                  signs the ticket again, and no transaction is repeated.
+                </p>
+                <button className="btn primary" disabled={busy} onClick={() => void recover()}>
+                  Recover ticket
+                </button>
+                {unseenTxid === record.txid && (
+                  <>
+                    <p>If your wallet reports this transaction as failed, the ticket can return to approval.</p>
+                    <button className="btn" disabled={busy} onClick={() => void returnToApproval()}>
+                      Check for a failed transaction
+                    </button>
+                  </>
+                )}
+              </>
             ) : (
               <>
                 <p className="event-error">

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { WalletInterface } from '@bsv/sdk'
-import { api, currentAuthEpoch, currentAuthIdentity } from '../auth/api.ts'
+import { api, currentAuthEpoch, sameAccount } from '../auth/api.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { DashboardIcon } from './DashboardIcon.tsx'
 import type { AttendeeRequest, PublishedEvent } from '../marketplace/types.ts'
@@ -198,8 +198,7 @@ function RequestTicket({ event }: { event: PublishedEvent }) {
     controller.current = attempt
     const check = () => {
       attempt.signal.throwIfAborted()
-      if (currentAuthEpoch() !== epoch || currentAuthIdentity() !== owner)
-        throw Error('Your signed-in account changed. Reopen this event before requesting.')
+      if (!sameAccount(epoch, owner)) throw Error('Your signed-in account changed. Reopen this event before requesting.')
     }
     setBusy(true)
     setError('')

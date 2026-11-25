@@ -1,7 +1,7 @@
 import { synchroniseReceivedTickets } from '../handoff/sync.ts'
 import { headerProgressText, SHARED_HEADER_TRUST, SHARED_HEADERS_ENABLED } from '../headers/cached-sync.ts'
 import { useEffect, useRef, useState } from 'react'
-import { api, currentAuthEpoch, currentAuthIdentity } from '../auth/api.ts'
+import { api, currentAuthEpoch, sameAccount } from '../auth/api.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import type { AttendeeRequest, AttendeeTicket } from '../marketplace/types.ts'
 import type { VenueIssuance } from '../events/issuance-types.ts'
@@ -72,8 +72,7 @@ export function AttendeeDashboard() {
     setProgress(undefined)
     const check = () => {
       controller.signal.throwIfAborted()
-      if (!mounted.current || currentAuthEpoch() !== epoch || currentAuthIdentity() !== owner)
-        throw Error('The signed-in account changed. Reopen your Dashboard.')
+      if (!mounted.current || !sameAccount(epoch, owner)) throw Error('The signed-in account changed. Reopen your Dashboard.')
     }
     try {
       await action(controller.signal, check)
@@ -158,8 +157,7 @@ export function AttendeeDashboard() {
     backgroundExplicit.current = explicit
     const check = () => {
       controller.signal.throwIfAborted()
-      if (!mounted.current || currentAuthEpoch() !== epoch || currentAuthIdentity() !== owner)
-        throw Error('The signed-in account changed. Reopen your Dashboard.')
+      if (!mounted.current || !sameAccount(epoch, owner)) throw Error('The signed-in account changed. Reopen your Dashboard.')
     }
     setRefreshing(explicit ? 'explicit' : 'quiet')
     if (explicit) setError('')

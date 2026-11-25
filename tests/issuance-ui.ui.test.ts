@@ -143,11 +143,13 @@ it('offers a wallet check for a started attempt with no saved transaction and ne
     await context.close()
   }
 }, 10000)
-it('tells the organiser not to issue again when a transaction is saved without evidence', async () => {
+it('offers recovery, never a second issue, when a transaction is saved without evidence', async () => {
   const context = await browser.newContext({ viewport: { width: 390, height: 1000 } })
   try {
     const { page } = await setup(context, false, 'txid')
-    await page.getByText(/Do not issue it again/).waitFor()
+    await page.getByText(/no transaction is repeated/).waitFor()
+    expect(await page.getByRole('button', { name: 'Recover ticket', exact: true }).count()).toBe(1)
+    expect(await page.getByRole('button', { name: 'Issue and broadcast ticket', exact: true }).count()).toBe(0)
     expect(await page.getByRole('button', { name: 'Check wallet', exact: true }).count()).toBe(0)
   } finally {
     await context.close()

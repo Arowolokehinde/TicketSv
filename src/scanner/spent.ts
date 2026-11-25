@@ -1,5 +1,6 @@
 import { Transaction } from '@bsv/sdk'
 import { boundedBytes } from '../http/bounded-bytes.ts'
+import { WOC, pause, wocRequest } from '../http/woc.ts'
 import { verifyTicketSpend } from '../verification/authenticity.ts'
 import type { TicketPackage } from '../tickets/types.ts'
 
@@ -7,47 +8,14 @@ import type { TicketPackage } from '../tickets/types.ts'
 // has been passed on, even if it was mined. WhatsOnChain reports spends; every
 // reported spend is checked here against the ticket's lock before it is believed.
 // An "unspent" answer has no second source and is trusted.
-export const WOC = 'https://api.whatsonchain.com/v1/bsv/test'
+export { WOC }
 export type SpentList = { id: string; revision: number; checkedAt: string; tickets: string[]; spent: string[] }
 type Get = typeof fetch
-const options = { credentials: 'omit', redirect: 'error', cache: 'no-store' } as const
 const MAX_HOPS = 100,
   BATCH = 20,
   PACE_MS = 350
 export const outpoint = (txid: string, index: number) => `${txid}.${index}`
-
-function pause(ms: number, signal: AbortSignal): Promise<void> {
-  signal.throwIfAborted()
-  return new Promise((resolve, reject) => {
-    const stop = () => {
-      clearTimeout(timer)
-      reject(signal.reason)
-    }
-    const timer = setTimeout(() => {
-      signal.removeEventListener('abort', stop)
-      resolve()
-    }, ms)
-    signal.addEventListener('abort', stop, { once: true })
-  })
-}
-// WhatsOnChain limits anonymous use; back off and retry a rate-limited request.
-// Its 429 reply has no CORS header, so a browser sees a network error instead.
-async function request(get: Get, url: string, signal: AbortSignal, init: RequestInit = {}): Promise<Response> {
-  for (let attempt = 1; ; attempt++) {
-    let response: Response
-    try {
-      response = await get(url, { ...options, ...init, signal })
-    } catch (error) {
-      signal.throwIfAborted()
-      if (attempt === 3 || !(error instanceof TypeError)) throw error
-      await pause(1000 * 2 ** attempt, signal)
-      continue
-    }
-    if (response.status !== 429 || attempt === 3) return response
-    void response.body?.cancel().catch(() => {})
-    await pause(1000 * 2 ** attempt, signal)
-  }
-}
+const request = wocRequest
 async function text(response: Response, limit: number, signal: AbortSignal) {
   if (!response.ok) {
     void response.body?.cancel().catch(() => {})
